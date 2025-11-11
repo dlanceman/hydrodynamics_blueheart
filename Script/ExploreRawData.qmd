@@ -1,0 +1,149 @@
+---
+title: "Explore Hydrodynamics Raw Datasets"
+author: "Dana Lanceman"
+format: html
+editor: visual
+---
+
+## 1. Set up
+
+Load packages.
+
+```{r Packages}
+library(tidyverse)
+library(readxl)
+library(here)
+library(lubridate)
+```
+
+Load data.
+
+-   Properly format date/time data
+
+-   Filter flow based on data quality (water level data do not have data quality stated).
+
+    -   Data quality should be 1, 9, 10 (high quality data), 20 (fair quality) or 130 (unvalidated, but only way to get recent data)
+
+    -   This is currently filtered for both water level and discharge, but could remove the water level line given that we are mainly interested in discharge from this dataset
+
+```{r Data}
+# Water Level Data
+
+# Create a function for manipulating Water Level data as it comes in, including renaming the Water Level column, creating separate year/month/day/time columns and creating a date/time column in the correct format to be read as date/time
+
+LevelDateTime <- function(dat){
+  dat %>% 
+  rename(Level_m = `Water Level (m AHD)`) %>% 
+  mutate(Year = as.numeric(substr(Date, 8,11)), 
+         Month = substr(Date, 4,6),
+         MonthNum = case_when(Month == "Jan" ~ 1,
+                     Month == "Feb" ~ 2,
+                     Month == "Mar" ~ 3,
+                     Month == "Apr" ~ 4,
+                     Month == "May" ~ 5,
+                     Month == "Jun" ~ 6, 
+                     Month == "Jul" ~ 7,
+                     Month == "Aug" ~ 8,
+                     Month == "Sep" ~ 9,
+                     Month == "Oct" ~ 10,
+                     Month == "Nov" ~ 11,
+                     Month == "Dec" ~ 12),
+         Day = as.numeric(substr(Date, 1,2)),
+         Time = substr(Date, 13,17),
+         DateTime = as.POSIXct(paste0(Day, "-", MonthNum, "-", Year, " ", Time), format = "%d-%m-%Y %H:%M")) %>% 
+  subset(select = -c(Date, Site, Month, Time))
+}
+
+DunethinRock <- read_csv(here("Data/WaterLevel/DunethinRock.csv")) %>% LevelDateTime()
+PicnicPoint <- read_csv(here("Data/WaterLevel/PicnicPoint.csv"))  %>% LevelDateTime()
+StoneyWharf <- read_csv(here("Data/WaterLevel/StoneyWharf.csv"))  %>% LevelDateTime()
+VeeRd <- read_csv(here("Data/WaterLevel/VeeRd.csv"))  %>% LevelDateTime()
+SolarFarm <- read_csv(here("Data/WaterLevel/YandinaCoolumRdSolarFarm.csv")) %>% LevelDateTime()
+
+
+# Flow Data
+SouthMaroochyFlow <- read_csv(here("Data/Flow/141004B_South_Maroochy_River_at_Yandina.csv")) %>% 
+  mutate(DateTime = as.POSIXct(Time, format = "%d/%m/%Y %H:%M")) %>% 
+  subset(select = -c(Time)) %>% 
+  subset(Level_QC %in% c(1,9,10,20,130)) %>% 
+  subset(Discharge_QC %in% c(1,9,10,20,130))
+NorthMaroochyFlow <- read_csv(here("Data/Flow/141009A_NorthMaroochyRiveratEumundi.csv"))  %>% 
+  mutate(DateTime = as.POSIXct(Time, format = "%d/%m/%Y %H:%M")) %>% 
+  subset(select = -c(Time)) %>% 
+  subset(Level_QC %in% c(1,9,10,20,130)) %>% 
+  subset(Discharge_QC %in% c(1,9,10,20,130))
+```
+
+## 2. Basic exploration
+
+2023 January
+
+-   plot this period to match when we're modelling for currently.
+
+```{r Jan2023Exploration}
+ggplot(DunethinRock %>% subset(DateTime >= "2023-01-01 00:00:00") %>% 
+         subset(DateTime < "2023-02-02 00:00:00"), aes(DateTime, Level_m)) +
+  geom_line() +
+  geom_point()
+
+ggplot(PicnicPoint %>% subset(DateTime >= "2023-01-01 00:00:00") %>% 
+         subset(DateTime < "2023-02-02 00:00:00"), aes(DateTime, Level_m)) +
+  geom_line() +
+  geom_point()
+
+ggplot(StoneyWharf %>% subset(DateTime >= "2023-01-01 00:00:00") %>% 
+         subset(DateTime < "2023-02-02 00:00:00"), aes(DateTime, Level_m)) +
+  geom_line() +
+  geom_point()
+
+ggplot(SouthMaroochyFlow %>% subset(DateTime >= "2023-01-01 00:00:00") %>% 
+         subset(DateTime < "2023-02-02 00:00:00"), aes(DateTime, Discharge_cumecs)) +
+  geom_line() +
+  geom_point()
+
+ggplot(NorthMaroochyFlow %>% subset(DateTime >= "2023-01-01 00:00:00") %>% 
+         subset(DateTime < "2023-02-02 00:00:00"), aes(DateTime, Discharge_cumecs)) +
+  geom_line() +
+  geom_point()
+```
+
+2024 July to 2025 July (or shorter period for one station where data were not available until November)
+
+-   This is to align with the River Rd sites being opened up in August 2024 and Pilot Site in October 2024 to see if we're seeing any signal from that.
+
+```{r July2024Jul2025Exploration}
+ggplot(DunethinRock %>% subset(DateTime >= "2024-07-01 00:00:00") %>% 
+         subset(DateTime < "2025-07-01 00:00:00"), aes(DateTime, Level_m)) +
+  geom_line() +
+  geom_point()
+
+ggplot(PicnicPoint %>% subset(DateTime >= "2024-07-01 00:00:00") %>% 
+         subset(DateTime < "2025-07-01 00:00:00"), aes(DateTime, Level_m)) +
+  geom_line() +
+  geom_point()
+
+ggplot(StoneyWharf %>% subset(DateTime >= "2024-07-01 00:00:00") %>% 
+         subset(DateTime < "2025-07-01 00:00:00"), aes(DateTime, Level_m)) +
+  geom_line() +
+  geom_point()
+
+ggplot(VeeRd %>% subset(DateTime >= "2024-07-01 00:00:00") %>% 
+         subset(DateTime < "2025-07-01 00:00:00"), aes(DateTime, Level_m)) +
+  geom_line() +
+  geom_point()
+
+ggplot(SolarFarm %>% subset(DateTime >= "2024-07-01 00:00:00") %>% 
+         subset(DateTime < "2025-07-01 00:00:00"), aes(DateTime, Level_m)) +
+  geom_line() +
+  geom_point()
+
+ggplot(SouthMaroochyFlow %>% subset(DateTime >= "2024-07-01 00:00:00") %>% 
+         subset(DateTime < "2025-07-01 00:00:00"), aes(DateTime, Discharge_cumecs)) +
+  geom_line() +
+  geom_point()
+
+ggplot(NorthMaroochyFlow %>% subset(DateTime >= "2024-07-01 00:00:00") %>% 
+         subset(DateTime < "2025-07-01 00:00:00"), aes(DateTime, Discharge_cumecs)) +
+  geom_line() +
+  geom_point()
+```
