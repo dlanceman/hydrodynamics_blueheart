@@ -121,6 +121,38 @@ M38_1B <- read.csv(here("Data/WaterLevel/RMA_outputs/run0038/1b.csv"))
 M38_StoneyWharf <- read.csv(here("Data/WaterLevel/RMA_outputs/run0038/stoney_wharf.csv"))
 M38_Upstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0038/1a_upstream.csv"))
 M38_PicnicPoint <- read.csv(here("Data/WaterLevel/RMA_outputs/run0038/picnic_point.csv"))
+
+M39_WestCoolumBoatRamp <- read.csv(here("Data/WaterLevel/RMA_outputs/run0039/westcoolumboatramp.csv"))
+M39_Downstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0039/1a_downstream.csv"))
+M39_Dunethin <- read.csv(here("Data/WaterLevel/RMA_outputs/run0039/dunethin_rock.csv"))
+M39_1B <- read.csv(here("Data/WaterLevel/RMA_outputs/run0039/1b.csv"))
+M39_StoneyWharf <- read.csv(here("Data/WaterLevel/RMA_outputs/run0039/stoney_wharf.csv"))
+M39_Upstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0039/1a_upstream.csv"))
+M39_PicnicPoint <- read.csv(here("Data/WaterLevel/RMA_outputs/run0039/picnic_point.csv"))
+
+M40_WestCoolumBoatRamp <- read.csv(here("Data/WaterLevel/RMA_outputs/run0040/westcoolumboatramp.csv"))
+M40_Downstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0040/1a_downstream.csv"))
+M40_Dunethin <- read.csv(here("Data/WaterLevel/RMA_outputs/run0040/dunethin_rock.csv"))
+M40_1B <- read.csv(here("Data/WaterLevel/RMA_outputs/run0040/1b.csv"))
+M40_StoneyWharf <- read.csv(here("Data/WaterLevel/RMA_outputs/run0040/stoney_wharf.csv"))
+M40_Upstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0040/1a_upstream.csv"))
+M40_PicnicPoint <- read.csv(here("Data/WaterLevel/RMA_outputs/run0040/picnic_point.csv"))
+
+M41_WestCoolumBoatRamp <- read.csv(here("Data/WaterLevel/RMA_outputs/run0041/westcoolumboatramp.csv"))
+M41_Downstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0041/1a_downstream.csv"))
+M41_Dunethin <- read.csv(here("Data/WaterLevel/RMA_outputs/run0041/dunethin_rock.csv"))
+M41_1B <- read.csv(here("Data/WaterLevel/RMA_outputs/run0041/1b.csv"))
+M41_StoneyWharf <- read.csv(here("Data/WaterLevel/RMA_outputs/run0041/stoney_wharf.csv"))
+M41_Upstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0041/1a_upstream.csv"))
+M41_PicnicPoint <- read.csv(here("Data/WaterLevel/RMA_outputs/run0041/picnic_point.csv"))
+
+M52_WestCoolumBoatRamp <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/westcoolumboatramp.csv"))
+M52_Downstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/1a_downstream.csv"))
+M52_Dunethin <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/dunethin_rock.csv"))
+M52_1B <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/1b.csv"))
+M52_StoneyWharf <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/stoney_wharf.csv"))
+M52_Upstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/1a_upstream.csv"))
+M52_PicnicPoint <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/picnic_point.csv"))
 ```
 
 ## 2. Select relevant variables
@@ -224,6 +256,38 @@ M38_Upstream_1A <- TimeFormatModelData(M38_Upstream_1A)
 M38_Downstream_1A <- TimeFormatModelData(M38_Downstream_1A)
 M38_WestCoolumBoatRamp <- TimeFormatModelData(M38_WestCoolumBoatRamp)
 M38_PicnicPoint <- TimeFormatModelData(M38_PicnicPoint)
+
+M39_Dunethin <- TimeFormatModelData(M39_Dunethin)
+M39_1B <- TimeFormatModelData(M39_1B)
+M39_StoneyWharf <- TimeFormatModelData(M39_StoneyWharf)
+M39_Upstream_1A <- TimeFormatModelData(M39_Upstream_1A)
+M39_Downstream_1A <- TimeFormatModelData(M39_Downstream_1A)
+M39_WestCoolumBoatRamp <- TimeFormatModelData(M39_WestCoolumBoatRamp)
+M39_PicnicPoint <- TimeFormatModelData(M39_PicnicPoint)
+
+M40_Dunethin <- TimeFormatModelData(M40_Dunethin)
+M40_1B <- TimeFormatModelData(M40_1B)
+M40_StoneyWharf <- TimeFormatModelData(M40_StoneyWharf)
+M40_Upstream_1A <- TimeFormatModelData(M40_Upstream_1A)
+M40_Downstream_1A <- TimeFormatModelData(M40_Downstream_1A)
+M40_WestCoolumBoatRamp <- TimeFormatModelData(M40_WestCoolumBoatRamp)
+M40_PicnicPoint <- TimeFormatModelData(M40_PicnicPoint)
+
+M41_Dunethin <- TimeFormatModelData(M41_Dunethin)
+M41_1B <- TimeFormatModelData(M41_1B)
+M41_StoneyWharf <- TimeFormatModelData(M41_StoneyWharf)
+M41_Upstream_1A <- TimeFormatModelData(M41_Upstream_1A)
+M41_Downstream_1A <- TimeFormatModelData(M41_Downstream_1A)
+M41_WestCoolumBoatRamp <- TimeFormatModelData(M41_WestCoolumBoatRamp)
+M41_PicnicPoint <- TimeFormatModelData(M41_PicnicPoint)
+
+M52_Dunethin <- TimeFormatModelData(M52_Dunethin)
+M52_1B <- TimeFormatModelData(M52_1B)
+M52_StoneyWharf <- TimeFormatModelData(M52_StoneyWharf)
+M52_Upstream_1A <- TimeFormatModelData(M52_Upstream_1A)
+M52_Downstream_1A <- TimeFormatModelData(M52_Downstream_1A)
+M52_WestCoolumBoatRamp <- TimeFormatModelData(M52_WestCoolumBoatRamp)
+M52_PicnicPoint <- TimeFormatModelData(M52_PicnicPoint)
 ```
 
 ## 3. Clip data to equivalent timeframes
@@ -306,6 +370,38 @@ M38_WestCoolumBoatRamp <- SubsetTimes(M38_WestCoolumBoatRamp)
 M38_Dunethin <- SubsetTimes(M38_Dunethin)
 M38_StoneyWharf <- SubsetTimes(M38_StoneyWharf)
 M38_PicnicPoint <- SubsetTimes(M38_PicnicPoint)
+
+M39_Downstream_1A <- SubsetTimes(M39_Downstream_1A)
+M39_Upstream_1A <- SubsetTimes(M39_Upstream_1A)
+M39_1B <- SubsetTimes(M39_1B)
+M39_WestCoolumBoatRamp <- SubsetTimes(M39_WestCoolumBoatRamp)
+M39_Dunethin <- SubsetTimes(M39_Dunethin)
+M39_StoneyWharf <- SubsetTimes(M39_StoneyWharf)
+M39_PicnicPoint <- SubsetTimes(M39_PicnicPoint)
+
+M40_Downstream_1A <- SubsetTimes(M40_Downstream_1A)
+M40_Upstream_1A <- SubsetTimes(M40_Upstream_1A)
+M40_1B <- SubsetTimes(M40_1B)
+M40_WestCoolumBoatRamp <- SubsetTimes(M40_WestCoolumBoatRamp)
+M40_Dunethin <- SubsetTimes(M40_Dunethin)
+M40_StoneyWharf <- SubsetTimes(M40_StoneyWharf)
+M40_PicnicPoint <- SubsetTimes(M40_PicnicPoint)
+
+M41_Downstream_1A <- SubsetTimes(M41_Downstream_1A)
+M41_Upstream_1A <- SubsetTimes(M41_Upstream_1A)
+M41_1B <- SubsetTimes(M41_1B)
+M41_WestCoolumBoatRamp <- SubsetTimes(M41_WestCoolumBoatRamp)
+M41_Dunethin <- SubsetTimes(M41_Dunethin)
+M41_StoneyWharf <- SubsetTimes(M41_StoneyWharf)
+M41_PicnicPoint <- SubsetTimes(M41_PicnicPoint)
+
+M52_Downstream_1A <- SubsetTimes(M52_Downstream_1A)
+M52_Upstream_1A <- SubsetTimes(M52_Upstream_1A)
+M52_1B <- SubsetTimes(M52_1B)
+M52_WestCoolumBoatRamp <- SubsetTimes(M52_WestCoolumBoatRamp)
+M52_Dunethin <- SubsetTimes(M52_Dunethin)
+M52_StoneyWharf <- SubsetTimes(M52_StoneyWharf)
+M52_PicnicPoint <- SubsetTimes(M52_PicnicPoint)
 ```
 
 ## 4. Merge datasets at the same location
@@ -362,35 +458,6 @@ Also, compare water level phases by plotting both datasets against time for each
 Again, first create a function.
 
 ```{r WaterLevelPhaseFunction}
-compare_WL_phase1 <- function(RealData, ModelData, WaterLevelVarReal, WaterLevelVarModel, Title){
-# rolling join using data.table package
-# add extra Time columns
-dt1 <- as.data.table(RealData) %>% mutate(Time_x = Time)
-dt2 <- as.data.table(ModelData) %>% mutate(Time_y = Time)
-
-setkey(dt1, Time)
-setkey(dt2, Time)
-
- # Perform a rolling join to find the nearest match
- # roll = "nearest" finds the closest match, regardless of before/after
-result_dt <- dt2[dt1, roll = "nearest"]
-
-result_dt_long <- pivot_longer(result_dt, cols = c(WaterLevelVarReal, WaterLevelVarModel), names_to = "source", values_to = "levels") %>% 
-  mutate(Time_numeric = as.numeric(Time)) %>% 
-  filter(between(Time, as.POSIXct("2023-01-17 00:00:00", tz = "UTC"), as.POSIXct("2023-01-24 00:00:00", tz = "UTC")))
-
-result_dt_long$source <- result_dt_long$source %>% factor(ordered = TRUE, levels = c(WaterLevelVarModel, WaterLevelVarReal))
-
-p <- ggplot(result_dt_long, aes(x = Time_numeric, y = levels, color = source)) +
-  geom_point() +
-  geom_line() +
-  scale_color_manual(labels = c("Modelled", "observed"), values = c("red", "blue")) +
-  scale_x_datetime(date_labels = "%Y-%m-%d %H:%M:%S") +
-  ggtitle(Title)
-
-ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0035/Phase_", Title, ".png")), device = "png", plot = p, width = 10, height = 5)
-}
-
 compare_WL_phase <- function(RealData, ModelData, ModelData2, WaterLevelVarReal, WaterLevelVarModel, WaterLevelVarModel2, Title){
 # rolling join using data.table package
 # add extra Time columns
@@ -417,11 +484,11 @@ result_dt_long$source <- result_dt_long$source %>% factor(ordered = TRUE, levels
 p <- ggplot(result_dt_long, aes(x = Time_numeric, y = levels, color = source)) +
   geom_point() +
   geom_line() +
-  scale_color_manual(labels = c("Model36", "Model38", "observed"), values = c("red", "yellow", "blue")) +
+  scale_color_manual(labels = c("Model36", "Model52", "observed"), values = c("red", "yellow", "blue")) +
   scale_x_datetime(date_labels = "%Y-%m-%d %H:%M:%S") +
   ggtitle(Title)
 
-ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0038/Phase_", Title, ".png")), device = "png", plot = p, width = 10, height = 5)
+ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0052/Phase_", Title, ".png")), device = "png", plot = p, width = 10, height = 5)
 }
 
 ```
@@ -429,19 +496,19 @@ ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0038/Phase_", Title, 
 Now run the phase function for all locations.
 
 ```{r WaterLevelPhaseRun}
-compare_WL_phase(Downstream_1A, M36_Downstream_1A, M38_Downstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Downstream 1A")
+compare_WL_phase(Downstream_1A, M36_Downstream_1A, M52_Downstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Downstream 1A")
 
-compare_WL_phase(Upstream_1A, M36_Upstream_1A, M38_Upstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Upstream 1A")
+compare_WL_phase(Upstream_1A, M36_Upstream_1A, M52_Upstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Upstream 1A")
 
-compare_WL_phase(Dunethin, M36_Dunethin, M38_Dunethin, "WaterLevel", "i.Elevation", "Elevation_z","Dunethin Rock")
+compare_WL_phase(Dunethin, M36_Dunethin, M52_Dunethin, "WaterLevel", "i.Elevation", "Elevation_z","Dunethin Rock")
 
-compare_WL_phase(Solonist_1B, M36_1B, M38_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Solonist")
+compare_WL_phase(Solonist_1B, M36_1B, M52_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Solonist")
 
-compare_WL_phase(Heron_maybe_1B, M36_1B, M38_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Heron")
+compare_WL_phase(Heron_maybe_1B, M36_1B, M52_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Heron")
 
-compare_WL_phase(Stoney, M36_StoneyWharf, M38_StoneyWharf, "WaterLevel", "i.Elevation","Elevation_z", "Stoney Wharf")
+compare_WL_phase(Stoney, M36_StoneyWharf, M52_StoneyWharf, "WaterLevel", "i.Elevation","Elevation_z", "Stoney Wharf")
 
-compare_WL_phase(WestCoolumBoatRamp, M36_WestCoolumBoatRamp, M38_WestCoolumBoatRamp, "WaterLevel", "i.Elevation", "Elevation_z", "West Coolum Boat Ramp")
+compare_WL_phase(WestCoolumBoatRamp, M36_WestCoolumBoatRamp, M52_WestCoolumBoatRamp, "WaterLevel", "i.Elevation", "Elevation_z", "West Coolum Boat Ramp")
 
 #compare_WL_phase(PicnicPointJ, M36_PicnicPoint, M37_PicnicPoint, "WaterLevel", "i.Elevation", "Elevation_z", "Picnic Point Jamie 2")
 
