@@ -568,6 +568,14 @@ M78_1B <- read.csv.rma("0078", "1b") %>% TimeFormatModelData(.)
 M78_StoneyWharf <- read.csv.rma("0078", "stoney_wharf") %>% TimeFormatModelData(.) 
 M78_Upstream_1A <- read.csv.rma("0078", "1a_upstream") %>% TimeFormatModelData(.) 
 M78_PicnicPoint <- read.csv.rma("0078", "picnic_point") %>% TimeFormatModelData(.) 
+
+M82_WestCoolumBoatRamp <- read.csv.rma("0082", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M82_Downstream_1A <- read.csv.rma("0082", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M82_Dunethin <- read.csv.rma("0082", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M82_1B <- read.csv.rma("0082", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M82_StoneyWharf <- read.csv.rma("0082", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M82_Upstream_1A <- read.csv.rma("0082", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M82_PicnicPoint <- read.csv.rma("0082", "picnic_point") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
 ```
 
 ## 4. Merge datasets at the same location
@@ -643,21 +651,21 @@ result_dt2 <- dt3[result_dt, roll = "nearest"]
 
 result_dt_long <- pivot_longer(result_dt2, cols = c(WaterLevelVarReal, WaterLevelVarModel, WaterLevelVarModel2), names_to = "source", values_to = "levels") %>% 
   mutate(Time_numeric = as.numeric(Time)) %>% 
-  filter(between(Time, as.POSIXct("2023-04-17 00:00:00", tz = "UTC"), as.POSIXct("2023-04-24 00:00:00", tz = "UTC")))
+  filter(between(Time, as.POSIXct("2023-01-06 00:00:00", tz = "UTC"), as.POSIXct("2023-02-02 00:00:00", tz = "UTC")))
 
 result_dt_long$source <- result_dt_long$source %>% factor(ordered = TRUE, levels = c(WaterLevelVarModel, WaterLevelVarModel2, WaterLevelVarReal))
 
 p <- ggplot(result_dt_long, aes(x = Time_numeric, y = levels, color = source)) +
-  geom_point(size = 0.5) +
-  geom_line() +
-  scale_color_manual(labels = c("Heron", "Model", "Solonist"), values = c("red", "yellow", "blue")) +
+  #geom_point(size = 0.5) +
+  geom_line(linewidth = 0.2) +
+  scale_color_manual(labels = c("model77", "model82", "observed"), values = c("red", "yellow", "blue")) +
   scale_x_datetime(date_labels = "%d-%m-%Y") +
   ggtitle(Title) +
   xlab("Date") +
   ylab("Water Level") +
   labs(color = "") 
 
-ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0078/Phase_", Title, ".png")), device = "png", plot = p, width = 6, height = 3)
+ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0082/Phase_", Title, ".png")), device = "png", plot = p, width = 6, height = 3)
 }
 
 ```
@@ -680,7 +688,7 @@ result_dt <- dt2[dt1, roll = "nearest"]
  
 result_dt_long <- pivot_longer(result_dt, cols = c(WaterLevelVarReal, WaterLevelVarModel), names_to = "source", values_to = "levels") %>% 
   mutate(Time_numeric = as.numeric(Time)) %>% 
-  filter(between(Time, as.POSIXct("2023-04-17 00:00:00", tz = "UTC"), as.POSIXct("2023-04-24 00:00:00", tz = "UTC")))
+  filter(between(Time, as.POSIXct("2023-04-12 00:00:00", tz = "UTC"), as.POSIXct("2023-04-19 00:00:00", tz = "UTC")))
  
 result_dt_long$source <- result_dt_long$source %>% factor(ordered = TRUE, levels = c(WaterLevelVarModel, WaterLevelVarReal))
  
@@ -701,30 +709,33 @@ ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0078/Phase_", Title, 
 Now run the phase function for all locations. These are plots for comparing models.
 
 ```{r WaterLevelPhaseRun}
-compare_WL_phase(Downstream_1A, M74_Downstream_1A, M77_Downstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Downstream 1A")
+compare_WL_phase(Downstream_1A, M77_Downstream_1A, M82_Downstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Downstream 1A")
 
-compare_WL_phase(Upstream_1A, M74_Upstream_1A, M77_Upstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Upstream 1A")
+compare_WL_phase(Upstream_1A, M77_Upstream_1A, M82_Upstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Upstream 1A")
 
-compare_WL_phase(Dunethin, M74_Dunethin, M77_Dunethin, "WaterLevel", "i.Elevation", "Elevation_z","Dunethin Rock")
+compare_WL_phase(Dunethin, M77_Dunethin, M82_Dunethin, "WaterLevel", "i.Elevation", "Elevation_z","Dunethin Rock")
 
-compare_WL_phase(Solonist_1B, M74_1B, M77_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Solonist")
+compare_WL_phase(Solonist_1B, M77_1B, M82_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Solonist")
 
-compare_WL_phase(Heron_maybe_1B, M74_1B, M77_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Heron")
+compare_WL_phase(Heron_maybe_1B, M77_1B, M82_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Heron")
 
-compare_WL_phase(Stoney, M74_StoneyWharf, M77_StoneyWharf, "WaterLevel", "i.Elevation","Elevation_z", "Stoney Wharf")
+compare_WL_phase(Stoney, M77_StoneyWharf, M82_StoneyWharf, "WaterLevel", "i.Elevation","Elevation_z", "Stoney Wharf")
 
-compare_WL_phase(WestCoolumBoatRamp, M74_WestCoolumBoatRamp, M77_WestCoolumBoatRamp, "WaterLevel", "i.Elevation", "Elevation_z", "West Coolum Boat Ramp")
+compare_WL_phase(WestCoolumBoatRamp, M77_WestCoolumBoatRamp, M82_WestCoolumBoatRamp, "WaterLevel", "i.Elevation", "Elevation_z", "West Coolum Boat Ramp")
+
+
+compare_WL_phase(PicnicPointJ, M77_PicnicPoint, M82_PicnicPoint, "WaterLevel", "i.Elevation", "Elevation_z", "Picnic Point")
 
 # accounting for potential offsets
 
-compare_WL_phase(Downstream_1A + 0.25, M74_Downstream_1A, M77_Downstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Downstream 1A + 0.25")
+compare_WL_phase(Downstream_1A + 0.25, M77_Downstream_1A, M82_Downstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Downstream 1A + 0.25")
 
-compare_WL_phase(Upstream_1A + 0.1, M74_Upstream_1A, M77_Upstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Upstream 1A + 0.1")
-
-compare_WL_phase(PicnicPointJ, M56_PicnicPoint, M77_Picnic_Point, "WaterLevel", "i.Elevation", "Elevation_z", "Picnic Point Jamie 2")
+compare_WL_phase(Upstream_1A + 0.15, M77_Upstream_1A, M82_Upstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Upstream 1A + 0.15")
 
 
-#compare_WL_phase(PicnicPoint, M36_PicnicPoint, M37_PicnicPoint, "WaterLevel", "i.Elevation", "Elevation_z", "Picnic Point")
+compare_WL_phase(Solonist_1B + 0.1, M77_1B, M82_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Solonist + 0.1")
+
+compare_WL_phase(Heron_maybe_1B + 0.1, M77_1B, M82_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Heron + 0.1")
 
 ## Also run for late 2024 if we have any real data as that's when Vee Road and Solar Farm have data
 ```
@@ -742,7 +753,7 @@ compare_WL_phase1(Solonist_1B, M78_1B, "WaterLevel", "Elevation", "1B")
 
 compare_WL_phase1(Stoney, M78_StoneyWharf, "WaterLevel", "Elevation", "Stoney Wharf")
 
-compare_WL_phase1(WestCoolumBoatRamp, M78_WestCoolumBoatRamp, "WaterLevel", "Elevation", "West Coolum Boat Ramp")
+#compare_WL_phase1(WestCoolumBoatRamp, M78_WestCoolumBoatRamp, "WaterLevel", "Elevation", "West Coolum Boat Ramp")
 
 compare_WL_phase1(PicnicPointJ, M78_PicnicPoint, "WaterLevel", "Elevation", "Picnic Point")
 
@@ -766,7 +777,7 @@ Let's do it by channel:
 
 -   Coolum creek: picnic point, stoney wharf, west coolum boat ramp, 1a upstream
 
-```{r plot_yandina_creek_observed}
+```{r calibration_compare_observed}
 # yandina creek
 png(here("Output/ObservedYandinaCreek.png"), width = 2400, height = 1200, units = "px")
 ggplot() +
@@ -810,5 +821,55 @@ ggplot() +
         axis.title = element_text(size = 36),
         legend.title = element_text(size = 36),
         legend.text = element_text(size = 30))
+dev.off()
+```
+
+Also do this for a week during the validation period (17-24 April).
+
+```{r validation_compare_observed}
+# yandina creek
+png(here("Output/ObservedYandinaCreekVal.png"), width = 2400, height = 1200, units = "px")
+ggplot() +
+  geom_line(data = PicnicPointJ, aes(x = Time, y = WaterLevel, color = "Picnic Point"), linewidth = 1) +
+  geom_line(data = Stoney, aes(x = Time, y = WaterLevel, color = "Stoney Wharf"), linewidth = 1) +
+  geom_line(data = Heron_maybe_1B, aes(x = Time, y = WaterLevel, color = "1b - Heron"), linewidth = 1) +
+  geom_line(data = Solonist_1B, aes(x = Time, y = WaterLevel, color = "1b - Solonist"), linewidth = 1) +
+  geom_line(data = Downstream_1A, aes(x = Time, y = WaterLevel, color = "Downstream 1a"), linewidth = 1) +
+  xlim(as.POSIXct("2023-04-17 00:00:00", tz = "UTC"),as.POSIXct("2023-04-24 00:00:00", tz = "UTC")) +
+  theme_bw() +
+  scale_colour_manual(name = "Logger Locations",
+                      breaks = c("Picnic Point", "Stoney Wharf", "1b - Heron", "1b - Solonist", "Downstream 1a"),
+                      values = c("Picnic Point" = "red", 
+                                 "Stoney Wharf" = "blue", 
+                                 "1b - Solonist" = "orange", 
+                                 "Downstream 1a" = "black")) +
+  theme(axis.text = element_text(size = 30),
+        axis.title = element_text(size = 36),
+        legend.title = element_text(size = 36),
+        legend.text = element_text(size = 30))+
+  ylim(-0.5,1.25)
+dev.off()
+
+
+# coolum creek
+png(here("Output/ObservedCoolumCreekVal.png"), width = 2400, height = 1200, units = "px")
+ggplot() +
+  geom_line(data = PicnicPointJ, aes(x = Time, y = WaterLevel, color = "Picnic Point"), linewidth = 1) +
+  geom_line(data = Stoney, aes(x = Time, y = WaterLevel, color = "Stoney Wharf"), linewidth = 1) +
+  geom_line(data = WestCoolumBoatRamp, aes(x = Time, y = WaterLevel, color = "West Coolum Boat Ramp"), linewidth = 1) +
+  geom_line(data = Upstream_1A, aes(x = Time, y = WaterLevel, color = "Upstream 1a"), linewidth = 1) +
+  xlim(as.POSIXct("2023-04-17 00:00:00", tz = "UTC"),as.POSIXct("2023-04-24 00:00:00", tz = "UTC")) +
+  theme_bw() +
+  scale_colour_manual(name = "Logger Locations",
+                      breaks = c("Picnic Point", "Stoney Wharf", "West Coolum Boat Ramp", "Upstream 1a"),
+                      values = c("Picnic Point" = "red", 
+                                 "Stoney Wharf" = "blue", 
+                                 "West Coolum Boat Ramp" = "cyan", 
+                                 "Upstream 1a" = "purple")) +
+  theme(axis.text = element_text(size = 30),
+        axis.title = element_text(size = 36),
+        legend.title = element_text(size = 36),
+        legend.text = element_text(size = 30)) +
+  ylim(-0.5,1.25)
 dev.off()
 ```
