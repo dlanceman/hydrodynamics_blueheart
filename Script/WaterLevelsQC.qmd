@@ -203,7 +203,7 @@ TimeFormatModelData <- function(dataset){ # recode as date
 }
 
 SubsetTimes <- function(dataset){ # make a function for subsetting dates
-  dataset %>% filter(between(Time, as.POSIXct("2023-01-15 00:00:00", tz = "UTC"), as.POSIXct("2023-03-02 00:00:00", tz = "UTC")))
+  dataset %>% filter(between(Time, as.POSIXct("2023-01-15 00:00:00", tz = "UTC"), as.POSIXct("2023-06-02 00:00:00", tz = "UTC")))
 }
 ```
 
@@ -366,7 +366,7 @@ M56_PicnicPoint <- TimeFormatModelData(M56_PicnicPoint)
 
 ```{r Subset_dates}
 SubsetTimes <- function(dataset){ # make a function for subsetting dates
-  dataset %>% filter(between(Time, as.POSIXct("2023-01-01 00:00:00", tz = "UTC"), as.POSIXct("2023-03-02 00:00:00", tz = "UTC")))
+  dataset %>% filter(between(Time, as.POSIXct("2023-01-01 00:00:00", tz = "UTC"), as.POSIXct("2023-06-02 00:00:00", tz = "UTC")))
 }
 # listing UTC as the timezone as if we list Australia/Sydney as the timezone, it writes the equivalent UTC times anyway
 
@@ -559,7 +559,15 @@ M77_Dunethin <- read.csv.rma("0077", "dunethin_rock") %>% TimeFormatModelData(.)
 M77_1B <- read.csv.rma("0077", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
 M77_StoneyWharf <- read.csv.rma("0077", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
 M77_Upstream_1A <- read.csv.rma("0077", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
-M77_Picnic_Point <- read.csv.rma("0077", "picnic_point") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M77_PicnicPoint <- read.csv.rma("0077", "picnic_point") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+M78_WestCoolumBoatRamp <- read.csv.rma("0078", "westcoolumboatramp") %>% TimeFormatModelData(.) 
+M78_Downstream_1A <- read.csv.rma("0078", "1a_downstream") %>% TimeFormatModelData(.)
+M78_Dunethin <- read.csv.rma("0078", "dunethin_rock") %>% TimeFormatModelData(.) 
+M78_1B <- read.csv.rma("0078", "1b") %>% TimeFormatModelData(.) 
+M78_StoneyWharf <- read.csv.rma("0078", "stoney_wharf") %>% TimeFormatModelData(.) 
+M78_Upstream_1A <- read.csv.rma("0078", "1a_upstream") %>% TimeFormatModelData(.) 
+M78_PicnicPoint <- read.csv.rma("0078", "picnic_point") %>% TimeFormatModelData(.) 
 ```
 
 ## 4. Merge datasets at the same location
@@ -635,7 +643,7 @@ result_dt2 <- dt3[result_dt, roll = "nearest"]
 
 result_dt_long <- pivot_longer(result_dt2, cols = c(WaterLevelVarReal, WaterLevelVarModel, WaterLevelVarModel2), names_to = "source", values_to = "levels") %>% 
   mutate(Time_numeric = as.numeric(Time)) %>% 
-  filter(between(Time, as.POSIXct("2023-01-17 00:00:00", tz = "UTC"), as.POSIXct("2023-01-24 00:00:00", tz = "UTC")))
+  filter(between(Time, as.POSIXct("2023-04-17 00:00:00", tz = "UTC"), as.POSIXct("2023-04-24 00:00:00", tz = "UTC")))
 
 result_dt_long$source <- result_dt_long$source %>% factor(ordered = TRUE, levels = c(WaterLevelVarModel, WaterLevelVarModel2, WaterLevelVarReal))
 
@@ -649,7 +657,7 @@ p <- ggplot(result_dt_long, aes(x = Time_numeric, y = levels, color = source)) +
   ylab("Water Level") +
   labs(color = "") 
 
-ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0077/Phase_", Title, ".png")), device = "png", plot = p, width = 6, height = 3)
+ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0078/Phase_", Title, ".png")), device = "png", plot = p, width = 6, height = 3)
 }
 
 ```
@@ -672,7 +680,7 @@ result_dt <- dt2[dt1, roll = "nearest"]
  
 result_dt_long <- pivot_longer(result_dt, cols = c(WaterLevelVarReal, WaterLevelVarModel), names_to = "source", values_to = "levels") %>% 
   mutate(Time_numeric = as.numeric(Time)) %>% 
-  filter(between(Time, as.POSIXct("2023-01-17 00:00:00", tz = "UTC"), as.POSIXct("2023-01-24 00:00:00", tz = "UTC")))
+  filter(between(Time, as.POSIXct("2023-04-17 00:00:00", tz = "UTC"), as.POSIXct("2023-04-24 00:00:00", tz = "UTC")))
  
 result_dt_long$source <- result_dt_long$source %>% factor(ordered = TRUE, levels = c(WaterLevelVarModel, WaterLevelVarReal))
  
@@ -686,7 +694,7 @@ p <- ggplot(result_dt_long, aes(x = Time_numeric, y = levels, color = source)) +
   ylab("Water Level")  +
   labs(color = "")
   
-ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0077/Phase_", Title, ".png")), device = "png", plot = p, width = 6, height = 3)
+ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0078/Phase_", Title, ".png")), device = "png", plot = p, width = 6, height = 3)
 }
 ```
 
@@ -724,27 +732,27 @@ compare_WL_phase(PicnicPointJ, M56_PicnicPoint, M77_Picnic_Point, "WaterLevel", 
 Plots for report.
 
 ```{r Report_Phase_Plots}
-compare_WL_phase1(Downstream_1A, M77_Downstream_1A, "WaterLevel", "Elevation", "Downstream 1A")
+compare_WL_phase1(Downstream_1A, M78_Downstream_1A, "WaterLevel", "Elevation", "Downstream 1A")
 
-compare_WL_phase1(Upstream_1A, M77_Upstream_1A, "WaterLevel", "Elevation", "Upstream 1A")
+compare_WL_phase1(Upstream_1A, M78_Upstream_1A, "WaterLevel", "Elevation", "Upstream 1A")
 
-compare_WL_phase1(Dunethin, M77_Dunethin, "WaterLevel", "Elevation","Dunethin Rock")
+compare_WL_phase1(Dunethin, M78_Dunethin, "WaterLevel", "Elevation","Dunethin Rock")
 
-compare_WL_phase(Solonist_1B, Heron_maybe_1B, M77_1B, "i.WaterLevel", "WaterLevel", "Elevation", "1B")
+compare_WL_phase1(Solonist_1B, M78_1B, "WaterLevel", "Elevation", "1B")
 
-compare_WL_phase1(Stoney, M77_StoneyWharf, "WaterLevel", "Elevation", "Stoney Wharf")
+compare_WL_phase1(Stoney, M78_StoneyWharf, "WaterLevel", "Elevation", "Stoney Wharf")
 
-compare_WL_phase1(WestCoolumBoatRamp, M77_WestCoolumBoatRamp, "WaterLevel", "Elevation", "West Coolum Boat Ramp")
+compare_WL_phase1(WestCoolumBoatRamp, M78_WestCoolumBoatRamp, "WaterLevel", "Elevation", "West Coolum Boat Ramp")
 
-compare_WL_phase1(PicnicPointJ, M77_Picnic_Point, "WaterLevel", "Elevation", "Picnic Point")
+compare_WL_phase1(PicnicPointJ, M78_PicnicPoint, "WaterLevel", "Elevation", "Picnic Point")
 
 # accounting for potential offsets
 
-compare_WL_phase1(Downstream_1A + 0.25, M77_Downstream_1A, "WaterLevel", "Elevation", "Downstream 1A + 0.25")
+compare_WL_phase1(Downstream_1A + 0.25, M78_Downstream_1A, "WaterLevel", "Elevation", "Downstream 1A + 0.25")
 
-compare_WL_phase1(Upstream_1A + 0.15, M77_Upstream_1A, "WaterLevel", "Elevation", "Upstream 1A + 0.15")
+compare_WL_phase1(Upstream_1A + 0.15, M78_Upstream_1A, "WaterLevel", "Elevation", "Upstream 1A + 0.15")
 
-compare_WL_phase(Solonist_1B + 0.1, Heron_maybe_1B + 0.1, M77_1B, "i.WaterLevel", "WaterLevel", "Elevation", "1B + 0.1")
+compare_WL_phase1(Solonist_1B + 0.1, M78_1B, "WaterLevel", "Elevation", "1B + 0.1")
 
 ```
 
