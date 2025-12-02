@@ -153,6 +153,58 @@ M52_1B <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/1b.csv"))
 M52_StoneyWharf <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/stoney_wharf.csv"))
 M52_Upstream_1A <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/1a_upstream.csv"))
 M52_PicnicPoint <- read.csv(here("Data/WaterLevel/RMA_outputs/run0052/picnic_point.csv"))
+
+M53_WestCoolumBoatRamp <- read.csv(here("Data/WaterLevel/RMA_outputs/run0053/westcoolumboatramp.csv"))
+M53_Downstream_1A <- read_excel(here("Data/WaterLevel/RMA_outputs/run0053/1a_downstream.xlsx"))
+M53_Dunethin <- read.csv(here("Data/WaterLevel/RMA_outputs/run0053/dunethin_rock.csv"))
+M53_1B <- read_excel(here("Data/WaterLevel/RMA_outputs/run0053/1b.xlsx"))
+M53_StoneyWharf <- read.csv(here("Data/WaterLevel/RMA_outputs/run0053/stoney_wharf.csv"))
+M53_Upstream_1A <- read_excel(here("Data/WaterLevel/RMA_outputs/run0053/1a_upstream.xlsx"))
+M53_PicnicPoint <- read_excel(here("Data/WaterLevel/RMA_outputs/run0053/picnic_point.xlsx"))
+
+
+
+read.csv.rma <- function(run_number, filename){
+  read.csv(here(str_c("Data/WaterLevel/RMA_outputs/run", run_number, "/", filename, ".csv")), skip = 3, col.names = c("Time", "Elevation", "NA")) %>% select("Time", "Elevation")
+}
+
+M56_WestCoolumBoatRamp <- read.csv.rma("0056", "westcoolumboatramp")
+M56_Downstream_1A <- read.csv.rma("0056", "1a_downstream")
+M56_Dunethin <- read.csv.rma("0056", "dunethin_rock")
+M56_1B <- read.csv.rma("0056", "1b")
+M56_StoneyWharf <- read.csv.rma("0056", "stoney_wharf")
+M56_Upstream_1A <- read.csv.rma("0056", "1a_upstream")
+M56_PicnicPoint <- read.csv.rma("0056", "picnic_point")
+```
+
+Functions
+
+```{r Functions}
+read.csv.rma <- function(run_number, filename){
+  read.csv(here(str_c("Data/WaterLevel/RMA_outputs/run", run_number, "/", filename, ".csv")), skip = 3, col.names = c("Time", "Elevation", "NA")) %>% select("Time", "Elevation")
+}
+
+Select_Logger <- function(dataset){
+  dataset %>% select(c("Date Time", "Level (m AHD)")) %>% 
+    rename(Time = `Date Time`, 
+           WaterLevel = `Level (m AHD)`) %>% 
+    mutate(Time = as.POSIXct(Time, tz = "UTC"))
+}
+
+Select_PermStation <- function(dataset){
+  dataset %>% select(c("Date", "Water.Level..m.AHD.")) %>% 
+    rename(Time = Date,
+           WaterLevel = `Water.Level..m.AHD.`) %>% 
+    mutate(Time = as.POSIXct(Time, format = "%d %b %Y %H:%M", tz = "UTC")) # recode as date
+}
+
+TimeFormatModelData <- function(dataset){ # recode as date
+  dataset %>% mutate(Time = as.POSIXct(Time, format = "%d/%m/%Y %H:%M", tz = "UTC"))
+}
+
+SubsetTimes <- function(dataset){ # make a function for subsetting dates
+  dataset %>% filter(between(Time, as.POSIXct("2023-01-15 00:00:00", tz = "UTC"), as.POSIXct("2023-03-02 00:00:00", tz = "UTC")))
+}
 ```
 
 ## 2. Select relevant variables
@@ -288,6 +340,22 @@ M52_Upstream_1A <- TimeFormatModelData(M52_Upstream_1A)
 M52_Downstream_1A <- TimeFormatModelData(M52_Downstream_1A)
 M52_WestCoolumBoatRamp <- TimeFormatModelData(M52_WestCoolumBoatRamp)
 M52_PicnicPoint <- TimeFormatModelData(M52_PicnicPoint)
+
+M53_Dunethin <- TimeFormatModelData(M53_Dunethin)
+M53_1B <- TimeFormatModelData(M53_1B)
+M53_StoneyWharf <- TimeFormatModelData(M53_StoneyWharf)
+M53_Upstream_1A <- TimeFormatModelData(M53_Upstream_1A)
+M53_Downstream_1A <- TimeFormatModelData(M53_Downstream_1A)
+M53_WestCoolumBoatRamp <- TimeFormatModelData(M53_WestCoolumBoatRamp)
+M53_PicnicPoint <- TimeFormatModelData(M53_PicnicPoint)
+
+M56_Dunethin <- TimeFormatModelData(M56_Dunethin)
+M56_1B <- TimeFormatModelData(M56_1B)
+M56_StoneyWharf <- TimeFormatModelData(M56_StoneyWharf)
+M56_Upstream_1A <- TimeFormatModelData(M56_Upstream_1A)
+M56_Downstream_1A <- TimeFormatModelData(M56_Downstream_1A)
+M56_WestCoolumBoatRamp <- TimeFormatModelData(M56_WestCoolumBoatRamp)
+M56_PicnicPoint <- TimeFormatModelData(M56_PicnicPoint)
 ```
 
 ## 3. Clip data to equivalent timeframes
@@ -298,7 +366,7 @@ M52_PicnicPoint <- TimeFormatModelData(M52_PicnicPoint)
 
 ```{r Subset_dates}
 SubsetTimes <- function(dataset){ # make a function for subsetting dates
-  dataset %>% filter(between(Time, as.POSIXct("2023-01-15 00:00:00", tz = "UTC"), as.POSIXct("2023-03-02 00:00:00", tz = "UTC")))
+  dataset %>% filter(between(Time, as.POSIXct("2023-01-01 00:00:00", tz = "UTC"), as.POSIXct("2023-03-02 00:00:00", tz = "UTC")))
 }
 # listing UTC as the timezone as if we list Australia/Sydney as the timezone, it writes the equivalent UTC times anyway
 
@@ -402,6 +470,96 @@ M52_WestCoolumBoatRamp <- SubsetTimes(M52_WestCoolumBoatRamp)
 M52_Dunethin <- SubsetTimes(M52_Dunethin)
 M52_StoneyWharf <- SubsetTimes(M52_StoneyWharf)
 M52_PicnicPoint <- SubsetTimes(M52_PicnicPoint)
+
+M53_Downstream_1A <- SubsetTimes(M53_Downstream_1A)
+M53_Upstream_1A <- SubsetTimes(M53_Upstream_1A)
+M53_1B <- SubsetTimes(M53_1B)
+M53_WestCoolumBoatRamp <- SubsetTimes(M53_WestCoolumBoatRamp)
+M53_Dunethin <- SubsetTimes(M53_Dunethin)
+M53_StoneyWharf <- SubsetTimes(M53_StoneyWharf)
+M53_PicnicPoint <- SubsetTimes(M53_PicnicPoint)
+
+M56_Downstream_1A <- SubsetTimes(M56_Downstream_1A)
+M56_Upstream_1A <- SubsetTimes(M56_Upstream_1A)
+M56_1B <- SubsetTimes(M56_1B)
+M56_WestCoolumBoatRamp <- SubsetTimes(M56_WestCoolumBoatRamp)
+M56_Dunethin <- SubsetTimes(M56_Dunethin)
+M56_StoneyWharf <- SubsetTimes(M56_StoneyWharf)
+M56_PicnicPoint <- SubsetTimes(M56_PicnicPoint)
+```
+
+Do all functions together to speed things up from now on?
+
+```{r CombineFunctions}
+M57_WestCoolumBoatRamp <- read.csv.rma("0057", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M57_Downstream_1A <- read.csv.rma("0057", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M57_Dunethin <- read.csv.rma("0057", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M57_1B <- read.csv.rma("0057", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M57_StoneyWharf <- read.csv.rma("0057", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M57_Upstream_1A <- read.csv.rma("0057", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+
+M61_WestCoolumBoatRamp <- read.csv.rma("0061", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M61_Downstream_1A <- read.csv.rma("0061", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M61_Dunethin <- read.csv.rma("0061", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M61_1B <- read.csv.rma("0061", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M61_StoneyWharf <- read.csv.rma("0061", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M61_Upstream_1A <- read.csv.rma("0061", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+M69_WestCoolumBoatRamp <- read.csv.rma("0069", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M69_Downstream_1A <- read.csv.rma("0069", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M69_Dunethin <- read.csv.rma("0069", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M69_1B <- read.csv.rma("0069", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M69_StoneyWharf <- read.csv.rma("0069", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M69_Upstream_1A <- read.csv.rma("0069", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+M71_WestCoolumBoatRamp <- read.csv.rma("0071", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M71_Downstream_1A <- read.csv.rma("0071", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M71_Dunethin <- read.csv.rma("0071", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M71_1B <- read.csv.rma("0071", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M71_StoneyWharf <- read.csv.rma("0071", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M71_Upstream_1A <- read.csv.rma("0071", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+M72_WestCoolumBoatRamp <- read.csv.rma("0072", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M72_Downstream_1A <- read.csv.rma("0072", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M72_Dunethin <- read.csv.rma("0072", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M72_1B <- read.csv.rma("0072", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M72_StoneyWharf <- read.csv.rma("0072", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M72_Upstream_1A <- read.csv.rma("0072", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+M73_WestCoolumBoatRamp <- read.csv.rma("0073", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M73_Downstream_1A <- read.csv.rma("0073", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M73_Dunethin <- read.csv.rma("0073", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M73_1B <- read.csv.rma("0073", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M73_StoneyWharf <- read.csv.rma("0073", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M73_Upstream_1A <- read.csv.rma("0073", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+M74_WestCoolumBoatRamp <- read.csv.rma("0074", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M74_Downstream_1A <- read.csv.rma("0074", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M74_Dunethin <- read.csv.rma("0074", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M74_1B <- read.csv.rma("0074", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M74_StoneyWharf <- read.csv.rma("0074", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M74_Upstream_1A <- read.csv.rma("0074", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+#M74_Picnic_Point <- read.csv.rma("0074", "picnic_point") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+M75_Downstream_1A <- read.csv.rma("0075", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M75_1B <- read.csv.rma("0075", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M75_Upstream_1A <- read.csv.rma("0075", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+M76_WestCoolumBoatRamp <- read.csv.rma("0076", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M76_Downstream_1A <- read.csv.rma("0076", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M76_Dunethin <- read.csv.rma("0076", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M76_1B <- read.csv.rma("0076", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M76_StoneyWharf <- read.csv.rma("0076", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M76_Upstream_1A <- read.csv.rma("0076", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+
+M77_WestCoolumBoatRamp <- read.csv.rma("0077", "westcoolumboatramp") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M77_Downstream_1A <- read.csv.rma("0077", "1a_downstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M77_Dunethin <- read.csv.rma("0077", "dunethin_rock") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M77_1B <- read.csv.rma("0077", "1b") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M77_StoneyWharf <- read.csv.rma("0077", "stoney_wharf") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M77_Upstream_1A <- read.csv.rma("0077", "1a_upstream") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
+M77_Picnic_Point <- read.csv.rma("0077", "picnic_point") %>% TimeFormatModelData(.) %>% SubsetTimes(.)
 ```
 
 ## 4. Merge datasets at the same location
@@ -477,18 +635,18 @@ result_dt2 <- dt3[result_dt, roll = "nearest"]
 
 result_dt_long <- pivot_longer(result_dt2, cols = c(WaterLevelVarReal, WaterLevelVarModel, WaterLevelVarModel2), names_to = "source", values_to = "levels") %>% 
   mutate(Time_numeric = as.numeric(Time)) %>% 
-  filter(between(Time, as.POSIXct("2023-01-17 00:00:00", tz = "UTC"), as.POSIXct("2023-01-24 00:00:00", tz = "UTC")))
+  filter(between(Time, as.POSIXct("2023-01-06 00:00:00", tz = "UTC"), as.POSIXct("2023-02-02 00:00:00", tz = "UTC")))
 
 result_dt_long$source <- result_dt_long$source %>% factor(ordered = TRUE, levels = c(WaterLevelVarModel, WaterLevelVarModel2, WaterLevelVarReal))
 
 p <- ggplot(result_dt_long, aes(x = Time_numeric, y = levels, color = source)) +
   geom_point() +
   geom_line() +
-  scale_color_manual(labels = c("Model36", "Model52", "observed"), values = c("red", "yellow", "blue")) +
+  scale_color_manual(labels = c("Model74", "Model77", "observed"), values = c("red", "yellow", "blue")) +
   scale_x_datetime(date_labels = "%Y-%m-%d %H:%M:%S") +
   ggtitle(Title)
 
-ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0052/Phase_", Title, ".png")), device = "png", plot = p, width = 10, height = 5)
+ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0077/Phase_", Title, ".png")), device = "png", plot = p, width = 10, height = 5)
 }
 
 ```
@@ -496,37 +654,69 @@ ggsave(filename = here(str_c("Output/CompareWLPhase/", "run0052/Phase_", Title, 
 Now run the phase function for all locations.
 
 ```{r WaterLevelPhaseRun}
-compare_WL_phase(Downstream_1A, M36_Downstream_1A, M52_Downstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Downstream 1A")
+compare_WL_phase(Downstream_1A, M74_Downstream_1A, M77_Downstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Downstream 1A")
 
-compare_WL_phase(Upstream_1A, M36_Upstream_1A, M52_Upstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Upstream 1A")
+compare_WL_phase(Upstream_1A, M74_Upstream_1A, M77_Upstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Upstream 1A")
 
-compare_WL_phase(Dunethin, M36_Dunethin, M52_Dunethin, "WaterLevel", "i.Elevation", "Elevation_z","Dunethin Rock")
+compare_WL_phase(Dunethin, M74_Dunethin, M77_Dunethin, "WaterLevel", "i.Elevation", "Elevation_z","Dunethin Rock")
 
-compare_WL_phase(Solonist_1B, M36_1B, M52_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Solonist")
+compare_WL_phase(Solonist_1B, M74_1B, M77_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Solonist")
 
-compare_WL_phase(Heron_maybe_1B, M36_1B, M52_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Heron")
+compare_WL_phase(Heron_maybe_1B, M74_1B, M77_1B, "WaterLevel", "i.Elevation", "Elevation_z", "1B Heron")
 
-compare_WL_phase(Stoney, M36_StoneyWharf, M52_StoneyWharf, "WaterLevel", "i.Elevation","Elevation_z", "Stoney Wharf")
+compare_WL_phase(Stoney, M74_StoneyWharf, M77_StoneyWharf, "WaterLevel", "i.Elevation","Elevation_z", "Stoney Wharf")
 
-compare_WL_phase(WestCoolumBoatRamp, M36_WestCoolumBoatRamp, M52_WestCoolumBoatRamp, "WaterLevel", "i.Elevation", "Elevation_z", "West Coolum Boat Ramp")
+compare_WL_phase(WestCoolumBoatRamp, M74_WestCoolumBoatRamp, M77_WestCoolumBoatRamp, "WaterLevel", "i.Elevation", "Elevation_z", "West Coolum Boat Ramp")
 
-#compare_WL_phase(PicnicPointJ, M36_PicnicPoint, M37_PicnicPoint, "WaterLevel", "i.Elevation", "Elevation_z", "Picnic Point Jamie 2")
+# accounting for potential offsets
+
+compare_WL_phase(Downstream_1A + 0.25, M74_Downstream_1A, M77_Downstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Downstream 1A + 0.25")
+
+compare_WL_phase(Upstream_1A + 0.1, M74_Upstream_1A, M77_Upstream_1A, "WaterLevel", "i.Elevation", "Elevation_z", "Upstream 1A + 0.1")
+
+compare_WL_phase(PicnicPointJ, M56_PicnicPoint, M77_Picnic_Point, "WaterLevel", "i.Elevation", "Elevation_z", "Picnic Point Jamie 2")
+
 
 #compare_WL_phase(PicnicPoint, M36_PicnicPoint, M37_PicnicPoint, "WaterLevel", "i.Elevation", "Elevation_z", "Picnic Point")
 
 ## Also run for late 2024 if we have any real data as that's when Vee Road and Solar Farm have data
 ```
 
-## xx 5. Smoothing Picnic Point input dataset properly
+## 5. Plot observed data against one another
 
-The input data I had were smoothed, but smoothed strangely due to some outliers in the data. Let's inspect the data, remove/fix outliers and resmooth.
+Plot observed data together to explore differences as we move around the estuary.
 
-First, plot Jamie's smoothed data and the original raw data.
+Let's do it by channel:
 
-```{r Plot_PicnicPoint}
-ggplot(PicnicPointJ %>% filter(between(Time, as.POSIXct("2023-01-15 00:00:00", tz = "UTC"), as.POSIXct("2023-02-02 00:00:00", tz = "UTC"))), aes(x = Time, y = WaterLevel)) +
-  geom_line()
+-   Yandina creek: picnic point, stoney wharf, 1b, 1a downstream
 
-ggplot(PicnicPoint %>% filter(between(Time, as.POSIXct("2023-01-15 00:00:00", tz = "UTC"), as.POSIXct("2023-02-02 00:00:00", tz = "UTC"))), aes(x = Time, y = WaterLevel)) +
-  geom_line()
+-   Coolum creek: picnic point, stoney wharf, west coolum boat ramp, 1a upstream
+
+```{r plot_yandina_creek_observed}
+# yandina creek
+png(here("Output/ObservedYandinaCreek.png"), width = 2400, height = 1200, units = "px")
+ggplot() +
+  geom_line(data = PicnicPointJ, aes(x = Time, y = WaterLevel), colour = "red", linewidth = 1) +
+  geom_line(data = Stoney, aes(x = Time, y = WaterLevel), colour = "blue", linewidth = 1) +
+  geom_line(data = Heron_maybe_1B, aes(x = Time, y = WaterLevel), colour = "green", linewidth = 1) +
+  geom_line(data = Solonist_1B, aes(x = Time, y = WaterLevel), colour = "orange", linewidth = 1) +
+  geom_line(data = Downstream_1A, aes(x = Time, y = WaterLevel), colour = "black", linewidth = 1) +
+  xlim(as.POSIXct("2023-01-17 00:00:00", tz = "UTC"),as.POSIXct("2023-01-24 00:00:00", tz = "UTC")) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 30),
+        axis.title = element_text(size = 36))
+dev.off()
+
+# coolum creek
+png(here("Output/ObservedCoolumCreek.png"), width = 2400, height = 1200, units = "px")
+ggplot() +
+  geom_line(data = PicnicPointJ, aes(x = Time, y = WaterLevel), colour = "red", linewidth = 1) +
+  geom_line(data = Stoney, aes(x = Time, y = WaterLevel), colour = "blue", linewidth = 1) +
+  geom_line(data = WestCoolumBoatRamp, aes(x = Time, y = WaterLevel), colour = "cyan", linewidth = 1) +
+  geom_line(data = Upstream_1A, aes(x = Time, y = WaterLevel), colour = "purple", linewidth = 1) +
+  xlim(as.POSIXct("2023-01-17 00:00:00", tz = "UTC"),as.POSIXct("2023-01-24 00:00:00", tz = "UTC")) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 30),
+        axis.title = element_text(size = 36))
+dev.off()
 ```
