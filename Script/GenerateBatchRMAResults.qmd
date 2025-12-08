@@ -1,0 +1,106 @@
+---
+title: "Generate Batch RMA Results"
+author: "Dana Lanceman"
+format: html
+editor: visual
+---
+
+## Generate Batch RMA Results
+
+This document is for creating a batch of files to input into RMAPLT to create rasters of depth for each timepoint, and then running each file in RMAPLT to generate rasters, reading back in rasters, converting them to binary (wet/dry) rasters, and summing these rasters to calculate how long each cell is inundated, and therefore total residence times.
+
+Before we start, load packages.
+
+```{r Packages}
+library(tidyverse)
+library(terra)
+```
+
+Then, load in the text file we're going to edit to create batch files.
+
+```{r Txt_file}
+txt82 <- readLines("C:/Users/z5204897/OneDrive - UNSW/Desktop/RMA/BlueHeart/runs/BH023_0082/runbatch/run0082_runbatchresults.txt")
+
+# these are the lines we'll be modifying
+txt82[4]
+txt82[6]
+```
+
+Next, create a loop to create modified versions of this file for every value from 1628-4318. Store them in a list (seq_list).
+
+```{r modify_txt}
+## insert list of desired time steps here
+timesteps <- c(1628:4318)
+## insert number 1 lower than earliest timestep here
+preTime <- 1627
+## insert model number here 
+model <- "082"
+## insert input file here
+input <- txt82
+
+## don't need to modify these lines
+seq_list <- list()
+for(i in seq_along(timesteps)){
+  n <- i + preTime #timestep number to assign - starting from 1628
+  seq_list[[i]] <- input
+  seq_list[[i]][6] <- paste0("STEPS       ",n, "    ",n)
+  seq_list[[i]][4] <- paste0("OUTASC  BH023_0", model, "_Depths_",n,".ASC")
+  names(seq_list)[i] <- paste0("run", model, "_",n)
+}
+```
+
+Save each item in the list as a file.
+
+```{r Save_files}
+# Define a function to save each element
+save_to_file <- function(item, name) {
+  filename <- paste0("C:/Users/z5204897/OneDrive - UNSW/Desktop/RMA/BlueHeart/runs/BH023_0", model, "/runbatch/", name, ".ctl")
+  writeLines(item, con = filename)
+}
+
+# Apply the function across the list using mapply (which handles multiple arguments, 'item' and 'name')
+mapply(save_to_file, seq_list, names(seq_list))
+```
+
+Run each file in the executable RMAPLT to create rasters.
+
+```{r RunInExecutable}
+setwd("C:/Users/z5204897/Documents/RMAoffline/runs/run0082/runbatch")
+
+ctl_files <- list.files(path = "C:/Users/z5204897/Documents/RMAoffline/runs/run0082/runbatch", pattern = "\\.ctl$")
+
+# Define the path to your executable
+executable_path <- "C:/Users/z5204897/Documents/RMAoffline/RMAPLTV97C-july25.exe"
+
+for (i in seq_along(ctl_files)) {
+    print(paste("Processing file:", ctl_files[[i]]))
+
+    input_path <- paste0("C:/Users/z5204897/Documents/RMAoffline/runs/run0082/runbatch/", ctl_files[[i]]) 
+    
+    # Execute the command
+    # stdout=TRUE captures the standard output, which can be useful for debugging
+    system2(command = executable_path, 
+            args = input_path, 
+            stdout = FALSE, 
+            stderr = FALSE)
+}
+
+```
+
+After all asciis have been created, we want to create some summary stats from these:
+
+-   convert all to binary rasters
+
+-   summary rasters based on binary rasters:
+
+    -   for each day - what % of time was each cell inundated
+
+    -   for the full month - what % of time was each cell inundated
+
+-   summary csv with total area inundated in each floodplain (+ channels) at each time point
+
+First, convert rasters to binary rasters.
+
+```{r}
+
+```
