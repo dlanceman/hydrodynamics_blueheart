@@ -659,7 +659,7 @@ result_dt2 <- dt3[result_dt, roll = "nearest"]
 
 result_dt_long <- pivot_longer(result_dt2, cols = c(WaterLevelVarReal, WaterLevelVarModel, WaterLevelVarModel2), names_to = "source", values_to = "levels") %>% 
   mutate(Time_numeric = as.numeric(Time)) %>% 
-  filter(between(Time, as.POSIXct("2023-04-17 00:00:00", tz = "UTC"), as.POSIXct("2023-04-24 00:00:00", tz = "UTC")))
+  filter(between(Time, as.POSIXct("2023-05-08 00:00:00", tz = "UTC"), as.POSIXct("2023-05-15 00:00:00", tz = "UTC")))
 
 result_dt_long$source <- result_dt_long$source %>% factor(ordered = TRUE, levels = c(WaterLevelVarModel, WaterLevelVarModel2, WaterLevelVarReal))
 
@@ -696,7 +696,7 @@ result_dt <- dt2[dt1, roll = "nearest"]
  
 result_dt_long <- pivot_longer(result_dt, cols = c(WaterLevelVarReal, WaterLevelVarModel), names_to = "source", values_to = "levels") %>% 
   mutate(Time_numeric = as.numeric(Time)) %>% 
-  filter(between(Time, as.POSIXct("2023-04-17 00:00:00", tz = "UTC"), as.POSIXct("2023-04-24 00:00:00", tz = "UTC")))
+  filter(between(Time, as.POSIXct("2023-05-08 00:00:00", tz = "UTC"), as.POSIXct("2023-05-15 00:00:00", tz = "UTC")))
  
 result_dt_long$source <- result_dt_long$source %>% factor(ordered = TRUE, levels = c(WaterLevelVarModel, WaterLevelVarReal))
  
