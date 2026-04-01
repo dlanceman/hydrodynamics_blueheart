@@ -779,7 +779,87 @@ compare_WL_phase1(Solonist_1B + 0.1, M85_1B, "WaterLevel", "Elevation", "1B + 0.
 
 ```
 
-## 5. Plot observed data against one another
+## 5. RMSE - Quantify accuracy
+
+First, check for data gaps in the observed data as they may cause the below functions to run improperly or reduce the dataset length.
+
+```{r Observed_plot}
+plot(Dunethin$WaterLevel ~ Dunethin$Time) # gap after Feb 5
+plot(Stoney$WaterLevel ~ Stoney$Time)
+plot(PicnicPointJ$WaterLevel ~ PicnicPointJ$Time)
+plot(WestCoolumBoatRamp$WaterLevel ~ WestCoolumBoatRamp$Time)
+plot(Upstream_1A$WaterLevel ~ Upstream_1A$Time)
+plot(Downstream_1A$WaterLevel ~ Downstream_1A$Time)
+plot(Solonist_1B$WaterLevel ~ Solonist_1B$Time)
+plot(Heron_maybe_1B$WaterLevel ~ Heron_maybe_1B$Time)
+# all other datasets look fine.
+```
+
+Next, make a function.
+
+```{r RMSE_function}
+RMSE_obs_pred <- function(RealData, ModelData, WaterLevelVarReal, WaterLevelVarModel, Title){
+# rolling join using data.table package
+# add extra Time columns
+dt1 <- as.data.table(RealData) %>% mutate(Time_x = Time)
+dt2 <- as.data.table(ModelData) %>% mutate(Time_y = Time)
+setkey(dt1, Time)
+setkey(dt2, Time)
+
+ # Perform a rolling join to find the nearest match
+ # roll = "nearest" finds the closest match, regardless of before/after
+result_dt <- dt2[dt1, roll = "nearest"] 
+result_dt <- result_dt %>% 
+  filter(between(Time, as.POSIXct("2023-04-25 00:00:00", tz = "UTC"), as.POSIXct("2023-05-22 00:00:00", tz = "UTC"))) # these dates should be 01-17 to 02-14 for calibration and 04-25 to 05-22 for validation - change according to period targeted
+#result_dt
+
+rmse_manual <- sqrt(mean((result_dt[[WaterLevelVarReal]] - result_dt[[WaterLevelVarModel]])^2))
+print(rmse_manual)
+}
+```
+
+\
+Now, run this function for each calibration location.
+
+```{r RMSE_calibration}
+RMSE_obs_pred(Dunethin, M82_Dunethin, "WaterLevel", "Elevation","Dunethin Rock") # Dunethin rock observed data has a data gap after 5/2, so we can only use the period before that
+
+RMSE_obs_pred(Stoney, M82_StoneyWharf, "WaterLevel", "Elevation", "Stoney Wharf")
+
+RMSE_obs_pred(WestCoolumBoatRamp, M82_WestCoolumBoatRamp, "WaterLevel", "Elevation", "West Coolum Boat Ramp")
+
+RMSE_obs_pred(PicnicPointJ, M82_PicnicPoint, "WaterLevel", "Elevation", "Picnic Point")
+
+# accounting for potential offsets
+
+RMSE_obs_pred(Downstream_1A + 0.3, M82_Downstream_1A, "WaterLevel", "Elevation", "Downstream 1A + 0.3")
+
+RMSE_obs_pred(Upstream_1A + 0.15, M82_Upstream_1A, "WaterLevel", "Elevation", "Upstream 1A + 0.15")
+
+RMSE_obs_pred(Solonist_1B + 0.1, M82_1B, "WaterLevel", "Elevation", "1B + 0.1")
+
+RMSE_obs_pred(Heron_maybe_1B + 0.1, M82_1B, "WaterLevel", "Elevation", "1B + 0.1")
+```
+
+Also run this function for each validation location.
+
+```{r RMSE_validation}
+RMSE_obs_pred(Dunethin, M85_Dunethin, "WaterLevel", "Elevation","Dunethin Rock")
+
+RMSE_obs_pred(Stoney, M85_StoneyWharf, "WaterLevel", "Elevation", "Stoney Wharf")
+
+RMSE_obs_pred(PicnicPointJ, M85_PicnicPoint, "WaterLevel", "Elevation", "Picnic Point")
+
+# accounting for potential offsets
+
+RMSE_obs_pred(Downstream_1A + 0.3, M85_Downstream_1A, "WaterLevel", "Elevation", "Downstream 1A + 0.3")
+
+RMSE_obs_pred(Upstream_1A + 0.15, M85_Upstream_1A, "WaterLevel", "Elevation", "Upstream 1A + 0.15")
+
+RMSE_obs_pred(Solonist_1B + 0.1, M85_1B, "WaterLevel", "Elevation", "1B + 0.1")
+```
+
+## 6. Plot observed data against one another
 
 Plot observed data together to explore differences as we move around the estuary.
 

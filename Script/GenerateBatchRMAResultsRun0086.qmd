@@ -1,0 +1,769 @@
+---
+title: "Generate Batch RMA Results"
+author: "Dana Lanceman"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Generate Batch RMA Results
+
+This document is for creating a batch of files to input into RMAPLT to create rasters of depth for each timepoint, and then running each file in RMAPLT to generate rasters, reading back in rasters, converting them to binary (wet/dry) rasters, and summing these rasters to calculate how long each cell is inundated, and therefore total residence times.
+
+Before we start, load packages.
+
+```{r Packages}
+library(here)
+library(tidyverse)
+library(terra)
+library(sf)
+```
+
+Then, load in the text file we're going to edit to create batch files.
+
+```{r Txt_file}
+txt86 <- readLines("C:/Users/z5204897/Desktop/Dana/R/runs/run0086/run0086_runbatchresults.ctl")
+
+# these are the lines we'll be modifying
+txt86[4]
+txt86[6]
+```
+
+Next, create a loop to create modified versions of this file for every value in the desired timesteps for the relevant scenario (using the itr file, whatever steps correspond to start of day 17 to start of day 45). Store them in a list (seq_list).
+
+```{r modify_txt}
+## insert list of desired time steps here
+timesteps <- c(1543:4231)
+## insert number 1 lower than earliest timestep here
+preTime <- 1542
+## insert model number here 
+model <- "086"
+## insert input file here
+input <- txt86
+
+## don't need to modify these lines
+seq_list <- list()
+for(i in seq_along(timesteps)){
+  n <- i + preTime #timestep number to assign - starting from 1628
+  seq_list[[i]] <- input
+  seq_list[[i]][6] <- paste0("STEPS       ",n, "    ",n)
+  seq_list[[i]][4] <- paste0("OUTASC  BH023_0", model, "_Depths_",n,".ASC")
+  names(seq_list)[i] <- paste0("run", model, "_",n)
+}
+```
+
+Save each item in the list as a file.
+
+```{r Save_files}
+# Define a function to save each element
+save_to_file <- function(item, name) {
+  filename <- paste0("C:/Users/z5204897/Desktop/Dana/R/runs/run0", model, "/runbatch/", name, ".ctl")
+  writeLines(item, con = filename)
+}
+
+# Apply the function across the list using mapply (which handles multiple arguments, 'item' and 'name')
+mapply(save_to_file, seq_list, names(seq_list))
+```
+
+Run each file in the executable RMAPLT to create rasters.
+
+```{r RunInExecutable}
+setwd("C:/Users/z5204897/Desktop/Dana/R/runs/run0086/runbatch")
+
+ctl_files <- list.files(path = "C:/Users/z5204897/Desktop/Dana/R/runs/run0086/runbatch", pattern = "\\.ctl$")
+
+# Define the path to your executable
+executable_path <- "C:/Users/z5204897/Desktop/Dana/R/RMAPLTV97C-july25.exe"
+
+for (i in seq_along(ctl_files)) {
+    print(paste("Processing file:", ctl_files[[i]]))
+
+    input_path <- paste0("C:/Users/z5204897/Desktop/Dana/R/runs/run0",model, "/runbatch/", ctl_files[[i]]) 
+    
+    # Execute the command
+    # stdout=TRUE captures the standard output, which can be useful for debugging
+    system2(command = executable_path, 
+            args = input_path, 
+            stdout = FALSE, 
+            stderr = FALSE)
+}
+
+```
+
+After all asciis have been created, we want to create some summary stats from these:
+
+-   convert all to binary rasters
+
+-   summary rasters based on binary rasters:
+
+    -   for each day - what % of time was each cell inundated
+
+    -   for the full month - what % of time was each cell inundated
+
+-   summary csv with total area inundated in each floodplain (+ channels) at each time point
+
+First, convert rasters to binary rasters.
+
+```{r BinaryRasters}
+# reclassification thresholds - anything ~0 becomes 0 (not wet), >0 becomes 1 (wet)
+#thresholds <- matrix(
+#  c(0, 0.00001, 0,
+#    0.00001, 10, 1),
+#  ncol = 3, byrow = TRUE)
+
+# try calling 0-2cm "dry" to account for model issues in drying.
+thresholds2 <- matrix(
+  c(0, 0.02, 0,
+    0.02, 10, 1),
+  ncol = 3, byrow = TRUE)
+
+# put files into a list
+ascii_files <- list.files(path = "C:/Users/z5204897/Desktop/Dana/R/runs/run0086/runbatch", pattern = "\\.ASC$", full.names = TRUE)
+
+# make sure R reads these as rasters not just file names
+raster_list <- lapply(ascii_files, terra::rast)
+
+# make a new empty list for binary rasters
+#binary_rasters <- list()
+
+binary_rasters2 <- list()
+
+# loop creating binary rasters
+#for (i in seq_along(raster_list)) {
+#    print(paste("Processing file:", raster_list[[i]]))
+#
+#    binary_rasters[[i]] <- classify(raster_list[[i]], thresholds, include.lowest = #TRUE)
+#}
+
+for (i in seq_along(raster_list)) {
+    print(paste("Processing file:", raster_list[[i]]))
+
+    binary_rasters2[[i]] <- classify(raster_list[[i]], thresholds2, include.lowest = TRUE)
+}
+```
+
+Next, create a raster stack of all rasters so we can perform calculations on it.
+
+-   sum month
+
+```{r RasterCalcs}
+
+rasterStack <- rast(binary_rasters2)
+
+sumMonth <- app(rasterStack, fun = sum, na.rm = TRUE)
+
+# load shapefile for cropping
+blueheartareas <- st_read(here("shp/Blue_Heart_Sites_Hydrodynamics.shp"))
+crs(blueheartareas)
+
+relevant_nos <- c(4) # substitute whichever areas are relevant to the present scenario
+blueheartrelevant <- blueheartareas[relevant_nos,] # crop to only relevant areas
+
+# crop to relevant areas
+crs(sumMonth) <- crs(blueheartrelevant)
+sumMonthCrop <- crop(sumMonth, blueheartrelevant) %>% mask(blueheartrelevant)
+
+plot(sumMonthCrop)
+
+writeRaster(sumMonthCrop, here(paste0("Output/raster/run0", model, "/sumMonthCrop.tif")), overwrite = TRUE)
+# don't write next, leave to manipulate and write the % inundation raster instead
+```
+
+Also sum by day. For this, we'll need to load in data to understand which time step corresponds to which day/hour etc.
+
+```{r SumByDay}
+# this is the raw itr results file, trimmed to the timesteps we're using here.
+itr <- read.csv(here(paste0("runs/run0",model,"/BH023_0086_1543_4231.csv")))
+
+#There are many lines per time step and spaces of rows and we want to delete all these.
+
+TimeStepLookup <- na.omit(itr) %>% # remove empty rows
+  select(c(X17, X0.25, paste0("X",preTime + 1), X1)) %>%  # only select relevant columns
+  filter(X1 == 2) %>%  # only select the second iteration of each timestep (as the first iteration of the first timestep was transformed into column names here, and we just need one row per time step) 
+  select(c(X17, X0.25, paste0("X",preTime + 1))) %>% # now we don't need that last col anymore
+  rename(Day = X17, # rename all columns so they are logical
+         Hour = X0.25, 
+         Timestep = paste0("X",preTime + 1))
+
+# summarise this table to determine the first and last timestep in each Day
+TimeStepByDay <- TimeStepLookup %>% group_by(Day) %>% reframe(min = as.numeric(min(Timestep)), max = as.numeric(max(Timestep))) %>%  
+  mutate(difference = max - min + 1) %>% # this is the number of steps in that day
+  mutate(differencePlus1 = max - preTime + 1 + 1)  # this is the raster number in the list of rasters at which to stop at for that day
+TimeStepByDay
+
+# now in the list of rasters, we can select by day using min and max
+for (i in 1:29) {
+    print(paste("Processing day:", i+16))
+
+    assign(paste0("run0",model,"_Day",i + 16), binary_rasters2[(TimeStepByDay$min[i]-preTime) : (TimeStepByDay$max[i]-preTime)])
+}
+
+# make a list of all days
+DayNames <- ls(pattern = paste0("^","run0",model,"_Day"))
+# now actually retrive the objects into this list
+DayObjects <- mget(DayNames)
+
+
+
+# 1. Option if you want to save absolute values of number of inundation time points. (less recommended)
+# stack these rasters, sum per day and write them as tiffs.
+
+for (i in 1:28) {
+    print(paste("Processing day:", i+16))
+
+    rasterStack <- rast(unlist(DayObjects[i]))
+    
+    sumDay <- app(rasterStack, fun = sum, na.rm = TRUE)
+    
+    writeRaster(sumDay, here(paste0("Output/raster/run0", model, "/sumDay", i+16, ".tif")), overwrite = TRUE)
+}
+
+# 2. Option if you don't want to save absolute values and keep them as objects in R for now, just generate tiffs at the next stage (inundation %) (recommended)
+#sumDay <- list()
+
+#for (i in 1:28) {
+#    print(paste("Processing day:", i+16))
+
+#    rasterStack <- rast(unlist(DayObjects[i]))
+    
+#    sumDay[[i]] <- app(rasterStack, fun = sum, na.rm = TRUE)
+#}
+
+```
+
+Turn each of the day rasters into % time points inundated rather than absolute values which don't mean much.
+
+```{r %inun}
+# 1. option if you saved (wrote output) raster files above (less recommended)
+workingdir <- here(paste0("Output/raster/run0", model))
+
+absolute_files <- list.files(path = workingdir, pattern = c("\\.tif"), full.names = TRUE)
+# next time, don't make the files yet and just read in the list of working files, then create rasters only after % inundation calculations
+
+raster_names <- tools::file_path_sans_ext(basename(absolute_files))
+
+# make sure R reads these as rasters not just file names
+raster_abs <- lapply(absolute_files, terra::rast)
+names(raster_abs) <- raster_names
+
+
+## 2. ALTERNATIVE IF YOU HAVEN'T SAVED FILES ABOVE (recommended)
+## Currently can't run because I need a way to name raster_abs (only named above)
+#raster_abs <- append(sumDay, list(sumMonth)) # just add the month raster to the list of Days
+
+# 3. proceed as normal here either scenario
+percent_files <- list() # create an empty list in which to store transformed rasters
+
+for (i in seq_along(raster_abs)) {
+    print(paste("Processing file:", raster_abs[[i]]))
+  
+    max_value <- global(raster_abs[[i]], fun = "max", na.rm = TRUE) # determine max value in raster
+
+    percent_files[[i]] <- raster_abs[[i]]/max_value[[1,1]]
+    
+    writeRaster(percent_files[[i]], here(paste0("Output/raster/run0",model,"/inundated/inun_", names(raster_abs)[i], ".tif")), overwrite = TRUE)
+}
+
+```
+
+Also, create a summary csv that lists the area inundated in each floodplain wetland or in channels at each time point.
+
+To do this, we need a shapefile with our areas.
+
+```{r Summary csv}
+blueheartareas <- st_read(here("shp/Blue_Heart_Sites_Hydrodynamics.shp"))
+
+blueheartareas$Name
+```
+
+Subset this shapefile for only areas relevant to the present scenario:
+
+1.  2A1
+2.  2A3
+3.  5B
+4.  5C
+5.  1D
+6.  3A (YCW)
+7.  5a
+8.  1C
+9.  3B
+10. 5D
+11. 2A2
+12. 1A
+13. 2B
+14. 1B
+15. Natural North
+16. Natural South
+17. Yandina Creek
+18. Coolum Creek
+
+```{r subset_shp_clip_raster}
+relevant_nos <- c(4,17,18) # substitute whichever areas are relevant to the present scenario
+blueheartrelevant <- blueheartareas[relevant_nos,]
+
+# check that shapefile and raster line up - if so, they have compatible coordinate systems
+plot(binary_rasters2[[1]])
+plot(blueheartrelevant, add = TRUE)
+
+# summarise the area inundated per wetland (+ channels= areas not captured in polygons, but have water) at each time point - test for 1 time point
+sum_per_polygon <- terra::extract(x = binary_rasters2[[1]], y = blueheartrelevant, fun = sum, na.rm = TRUE) # calculate area inundated per polygon
+sum_not_polygons <- global(binary_rasters2[[1]], fun = "sum", na.rm = TRUE)[[1]] - sum(sum_per_polygon$BH023_0086_DEPTHS_1543) # calculate area inundated not in polygons
+sum_per_polygon_longer <- sum_per_polygon %>% 
+  pivot_longer(cols = -ID,
+    names_to = "TimeStep",
+    values_to = "Inundation",) # transform polygon dataframe longer first
+sum_per_polygon_wider <- sum_per_polygon_longer %>% pivot_wider(names_from = ID, values_from = Inundation) %>% # then transform wider so that we end up with one row per timestep
+  rename("5C" = "1","Yandina Creek" =  "2", "Coolum Creek" = "3") %>%  # rename columns for interpretability
+  mutate(Other = sum_not_polygons)
+
+
+
+
+# do this as a loop
+summary_tibble <- filter(sum_per_polygon_wider, FALSE) # first create an empty tibble with the correct structure
+
+
+for(i in seq_along(binary_rasters2)){
+  print(paste("Processing file:", binary_rasters2[[i]]))
+
+  sum_per_polygon <- terra::extract(x = binary_rasters2[[i]], y = blueheartrelevant, fun = sum, na.rm = TRUE) # calculate area inundated per polygon
+  sum_not_polygons <- global(binary_rasters2[[i]], fun = "sum", na.rm = TRUE)[[1]] - sum(sum_per_polygon[2]) # calculate area inundated not in polygons
+  sum_per_polygon_longer <- sum_per_polygon %>% 
+  pivot_longer(cols = -ID,
+    names_to = "TimeStep",
+    values_to = "Inundation",) # transform polygon dataframe longer first
+  sum_per_polygon_wider <- sum_per_polygon_longer %>% pivot_wider(names_from = ID, values_from = Inundation) %>% # then transform wider so that we end up with one row per timestep
+  rename("5C" = "1","Yandina Creek" =  "2", "Coolum Creek" = "3") %>%  # rename columns for interpretability
+  mutate(Other = sum_not_polygons)
+
+  summary_tibble <- summary_tibble %>% add_row(sum_per_polygon_wider[1,])
+}
+
+summary_tibble2 <- summary_tibble %>% 
+  rename(Timestep = TimeStep) %>% 
+  mutate(Timestep = as.numeric(substr(Timestep,19,22))) %>% 
+  full_join(TimeStepLookup)
+
+
+
+# these are numbers of grid cells inundated, let's also get total area in each section for % inundation
+extracted_values <- extract(binary_rasters2[[1]], blueheartrelevant) %>% subset(!is.na(BH023_0086_DEPTHS_1543))
+
+# The 'table' function groups and counts the occurrences of each ID
+cell_counts <- table(extracted_values$ID) 
+
+# View the result: ID (polygon ID) and Freq (cell count)
+print(cell_counts)
+
+cell_counts[1]
+
+summary_tibble2a <- summary_tibble2 %>% 
+  mutate(YandinaCreek_area_m2 = `Yandina Creek`/cell_counts[1]*100,
+         CoolumCreek_area_m2 = `Coolum Creek`/cell_counts[2]*100)
+
+summary_tibble3 <- summary_tibble2 %>% 
+  #select(-c("Yandina Creek", "Coolum Creek", "Other")) %>% 
+  mutate(#YCW_percent = YCW / cell_counts[1] * 100,
+         #NaturalNorth_percent = NaturalNorth / cell_counts[2] * 100,
+         #NaturalSouth_percent = NaturalSouth / cell_counts[3] * 100,
+         #YCW_area_m2 = YCW*400,
+         #NaturalNorth_area_m2 = NaturalNorth*400,
+         #NaturalSouth_area_m2 = NaturalSouth*400,
+    `5C_percent`=`5C`/cell_counts[1]*100,
+    `5C_area_m2`=`5C`*400)
+
+
+write.csv(summary_tibble3, here(paste0("Output/csv/run0",model,"_summary.csv")))
+
+```
+
+Also plot this over time.
+
+```{r PlotInundatedAreas}
+alltime <- read.csv(here(paste0("Output/csv/run0", model, "_summary.csv")))
+
+ggplot(alltime) +
+  geom_line(aes(x = Timestep, y = X5C_area_m2), color = "black") 
+```
+
+Also calculate the average inundation area in each floodplain over all time.
+
+```{r AverageInundation}
+FPareas <- alltime %>% select(contains("area")) %>% colSums()/2689 # average area at any time point = sum all / number of time points
+FPareas/10000 # areas in ha
+sum(FPareas/10000)
+```
+
+Create a summary over all time. (**this is basically the same as the above**)
+
+```{r Summarise}
+alltimeAreasummary <- alltime %>% select(c("Timestep","Day","Hour",contains("area"))) %>% 
+  pivot_longer(cols = c(contains("area")), names_to = "Floodplain", values_to = "Area") %>% 
+  group_by(Floodplain) %>% 
+  summarise(mean = mean(Area), se = sd(Area)/sqrt(nrow(alltime))) # average area per floodplain inundated at any one time
+
+```
+
+Divide this into high, mid and low elevation areas, for organic carbon reasons.
+
+\*\* NOTE - DEM IS NOT WHAT WE USED IN THE MODEL ESP FOR NATURAL AREAS, SO SHOULD REDO THIS WITH A MESH DERIVED FROM THE MODEL IN FUTURE, OTHERWISE IT SAYS THAT THE NATURAL AREAS ARE ALL HIGH ELEVATIONS WHICH IS NOT HOW WE'VE MODELLED THEM \*\*
+
+```{r DEMreclassification}
+# load in DEM
+DEM <- rast(here("Data/merged_2014.tif"))
+crs(DEM)
+
+# also load in the shapefile (in case you haven't in a chunk above) with different floodplain areas
+blueheartareas <- st_read(here("shp/Blue_Heart_Sites_Hydrodynamics.shp"))
+crs(blueheartareas)
+
+blueheartareas$Name
+plot(blueheartareas)
+
+# in case you haven't run the section specifying relevant areas above
+relevant_nos <- c(4) # substitute whichever areas are relevant to the present scenario
+blueheartrelevant <- blueheartareas[relevant_nos,]
+
+crs(DEM) <- crs(blueheartrelevant)
+crs(DEM)
+
+# reclassify DEM into high, medium and low elevations based on what was used for the Blue Heart reporting (high - >0.75m, med - 0.5-0.75m, low - 0-0.5m). Given there is no info for very low (-0.25-0.25m) elevations, we will assume they have the same organic carbon as low elevations (0-0.5m). 
+
+thresholdsDEM <- matrix(
+  c(-4, -0.25, NA, # below 0.25m shouldn't be vegetated 
+    -0.25, 0.25, 1, # very low and low elevations together
+    0.25, 0.5, 1, 
+    0.5, 0.75, 2, # medium elevations
+    0.75, 2, 3, # high elevations,
+    2, 220, NA # above 2m would not be intertidal vegetation
+  ), 
+  ncol = 3, byrow = TRUE)
+
+DEMclass <- classify(DEM, thresholdsDEM, include.lowest = TRUE)
+
+plot(DEMclass)
+
+
+# create new DEMs for each elevation category
+
+thresholdsLow <- matrix( # include low and very low
+  c(1, 1, 1,
+    1.1, 3, NA),
+  ncol = 3, byrow = TRUE)
+DEMLow <- DEMclass %>% classify(thresholdsLow, include.lowest = TRUE)
+plot(DEMLow)
+
+thresholdsMed <- matrix( # medium
+  c(1, 1, NA,
+    2, 2, 1,
+    2.1, 3, NA),
+  ncol = 3, byrow = TRUE)
+DEMMid <- DEMclass %>% classify(thresholdsMed, include.lowest = TRUE)
+plot(DEMMid)
+
+thresholdsHigh <- matrix( # high
+  c(1, 2, NA,
+    3, 3, 1),
+  ncol = 3, byrow = TRUE)
+DEMHigh <- DEMclass %>% classify(thresholdsHigh, include.lowest = TRUE)
+plot(DEMHigh)
+
+
+
+# next, intersect this DEM with the binary month inundation raster for each scenario to determine which cells are in which category
+Month <- rast(here("Output/raster/run0086/inundated/inun_sumMonthCrop.tif"))
+crs(Month)
+crs(Month) <- crs(blueheartrelevant)
+crs(Month)
+Month_res <- terra::resample(Month, DEMclass) #resample for same resolution
+
+plot(Month_res)
+
+#crop Month to the extent of DEMclass so we can do calculations with them
+Month_clip <- crop(Month_res, blueheartrelevant)
+Month_mask <- mask(Month_clip, blueheartrelevant)
+
+plot(Month_mask)
+
+# mask each DEMLow-High to blueheartrelevant and Month (DEMs have more areas where the other is blank)
+DEMLow_clip <- crop(DEMLow, blueheartrelevant)
+DEMLow_mask <- mask(DEMLow_clip, blueheartrelevant)
+plot(DEMLow_mask)
+
+DEMMid_clip <- crop(DEMMid, blueheartrelevant)
+DEMMid_mask <- mask(DEMMid_clip, blueheartrelevant)
+plot(DEMMid_mask)
+
+DEMHigh_clip <- crop(DEMHigh, blueheartrelevant)
+DEMHigh_mask <- mask(DEMHigh_clip, blueheartrelevant)
+plot(DEMHigh_mask)
+
+# multiply the rasters together for each class, and each inundated cell will have its proportion (x2 or x3 for mid or high, so divide by those numbers), while non-inundated cells will remain at a value of 0
+InunLow_reclass <- DEMLow_mask * Month_mask
+InunMid_reclass <- DEMMid_mask * Month_mask / 2
+InunHigh_reclass <- DEMHigh_mask * Month_mask / 3
+
+plot(InunLow_reclass)
+plot(InunMid_reclass)
+plot(InunHigh_reclass)
+
+res(InunLow_reclass) # these rasters have a 1x1m resolution now. so any summing stats automatically are at the m2 unit.
+
+# calculate total value in each low/mid/high category - this is the proportion of areas allocated to each organic carbon zone
+
+sum_elev <- tibble(Elevation = c("Low", "Mid", "High"), 
+                   InunArea = as.numeric(c(global(InunLow_reclass, fun = "sum", na.rm = TRUE),
+                         global(InunMid_reclass, fun = "sum", na.rm = TRUE),
+                         global(InunHigh_reclass, fun = "sum", na.rm = TRUE)))) 
+sum_elev <- sum_elev %>% 
+  mutate(InunPerc = InunArea/sum(sum_elev$InunArea)*100)
+
+sum(sum_elev$InunArea) # this should also represent the average area of floodplain inundated at any given point in time.
+```
+
+Now, summarise the proportion of area in each class for each floodplain. This is currently calculating an average value for each floodplain over all time, but we could also do a rolling loop to calculate proportions at every timestep.
+
+```{r ElevationClassesFPs}
+InunLow_reclass
+InunMid_reclass
+InunHigh_reclass
+
+Inun_fn <- function(raster){
+  Inun_per_polygon <- terra::extract(x = raster, y = blueheartrelevant, fun = sum, na.rm = TRUE) # calculate area inundated per polygon
+  Inun_per_polygon_longer <- Inun_per_polygon %>% 
+  pivot_longer(cols = -ID,
+    names_to = "TimeStep", # Timestep is irrelevant here, just copied from a function above where it was relevant
+    values_to = "Inundation",) # transform polygon dataframe longer first
+  Inun_per_polygon_longer %>% pivot_wider(names_from = ID, values_from = Inundation) %>% 
+  rename("5C" = "1")  # rename columns for interpretability
+}
+
+LowSums <- Inun_fn(InunLow_reclass)
+MidSums <- Inun_fn(InunMid_reclass)
+HighSums <- Inun_fn(InunHigh_reclass)
+
+my_list <- list(Low = LowSums, Mid = MidSums, High = HighSums)
+
+FPElevs <- bind_rows(my_list, .id = "source_name") %>% select(-TimeStep) 
+FPElevs <- FPElevs %>% mutate(
+  x5CPerc = `5C`/sum(FPElevs$`5C`)*100
+)
+
+```
+
+### 5. Denitrification calculations
+
+According to Keith et al. 2025, the equation for denitrification in the Blue Heart is:
+
+*Log (denitrification, mg/m2/h) = 0.5093 (log (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
+
+I'm going to assume Log here actually means Ln or Loge.
+
+This can be rearranged as:
+
+*denitrification, mg/m2/h = e\^(0.5093 (ln (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%)))*
+
+Given we are taking the nitrate value as a constant of 0.05305, this then becomes:
+
+*denitrification, mg/m2/h = e\^(0.5093 (ln (3.05305)) + 0.2067 + (0.0133\*Soil OC%)))*
+
+By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 10.5, Medium (0.5-0.75m) = 14.7, Low (0-0.5m) = 13.0), we get the following results:
+
+High elevation: *denitrification, mg/m2/h = 2.1119*
+
+Medium elevation: *denitrification, mg/m2/h = 2.1677*
+
+Low elevation: *denitrification, mg/m2/h = 2.1451*
+
+So, to calculate the amount of denitrification occuring in each floodplain in each timestep, we can use the proportion of the inundated floodplain in each elevation class to multiply the area out by these numbers.
+
+**Note we are currently using one proportion per floodplain area, but we should really use a rolling calculation as proportions of different elevation classes would change over time. Ignore for now, as the numbers for each elevation class are so similar anyway it would unlikely make much of a difference.**
+
+When using data from FPElevs, row 1 is Low, row 2 is Med and row 3 is High.
+
+The column numbers will depend on which floodplains are included in each scenario, but check these.
+
+We are calculating denitrification in mg/hr. Let's change this to g/hr as otherwise the numbers are too hard to decipher (so divide by 1000).
+
+```{r DenitrificationByTimestep}
+DenitTimestep <- alltime %>% select("Day", "Hour", contains("area")) %>% subset(!is.na(Day)) %>% 
+  mutate(Hour = case_when(Hour == 24 ~ 0, # change 24th hour to 0th hour of next day
+                          .default = Hour),
+         Day = case_when(Hour == 0 ~ Day + 1,
+                         .default = Day),
+         X5CDenit = X5C_area_m2*(as.numeric(FPElevs[1,3]/100))*2.1451/1000 + 
+           X5C_area_m2*(as.numeric(FPElevs[2,3]/100))*2.1677/1000 + 
+           X5C_area_m2*(as.numeric(FPElevs[3,3]/100))*2.1119/1000,
+         DateTime = as.POSIXct(paste0("2023-",floor((Day-31)/100-0.001)+2,"-",Day-31*(floor((Day-31)/100-0.001)+1)," ",floor(Hour),":",(Hour-floor(Hour))*60), "%Y-%m-%d %h:%M"))
+
+# export this so we can use it in combination with other scenarios
+write.csv(DenitTimestep, here(paste0("Output/csv/run0",model,"_denit.csv")))
+
+# pivot so that all data are in the same column
+DenitTimestepLong <- DenitTimestep %>% 
+  select(contains("Denit"), DateTime) %>% 
+  rename("5C" = "X5CDenit") %>%  
+  pivot_longer(c("5C"), 
+               names_to = "Floodplain", 
+               values_to = "Denitrification_g") 
+
+# plot!
+ggplot(DenitTimestepLong, aes(x = DateTime, y = Denitrification_g, color = Floodplain)) +
+  geom_line() +
+  xlab("Date") +
+  ylab("Denitrification (g)") + 
+  theme_classic()
+
+```
+
+Note to calculate total denitrification, we can only take one denitrification number per hour, as we currently have more with multiple timesteps.
+
+```{r TotalDenitrification}
+TotalDenit <- DenitTimestep %>% filter(Hour %in% c(1:24)) %>%  # only select one observation per hour
+  select(contains("Denit")) %>% 
+  colSums()/1000
+TotalDenit
+```
+
+### 6. Convert inundation frequency (hydroperiod) to habitat types
+
+Reclassify the monthly raster based on thresholds calculated from the calibration period scenario (run 0082).
+
+Thresholds we're assuming:
+
+-   Mudflat \>65% (4)
+
+-   Mangrove 30-65% (3)
+
+-   Saltmarsh 20-30% (2)
+
+-   Supratidal forest 0-20% (1)
+
+```{r Habitat_raster}
+month_inun <- rast(here("Output/raster/run0086/inundated/inun_sumMonthCrop.tif")) # substitute name for another scenario
+
+thresholdsHab <- matrix(
+  c(0, 0.3, 1,
+    #0.2, 0.3, 2, # removing saltmarsh as not able to model. if add back in, have to change the above upper boundary too and the assigned numbers below
+    0.3, 0.65, 2,
+    0.65, 1, 3),
+  ncol = 3, byrow = TRUE)
+
+monthHab <- classify(month_inun, thresholdsHab, include.lowest = TRUE)
+
+plot(monthHab)
+
+# crop to relevant areas
+crs(monthHab) <- crs(blueheartrelevant)
+monthHabCrop <- crop(monthHab, blueheartrelevant) %>% mask(blueheartrelevant)
+
+plot(monthHabCrop)
+
+# export this as a tiff
+writeRaster(monthHabCrop, here(paste0("Output/raster/run0",model,"/inundated/run0",model,"_MonthHabCrop.tif")))
+```
+
+Determine accuracy based on validation points.
+
+```{r Validation_accuracy}
+# import sampling points as a shapefile
+samplePts <- st_read("C:/Users/z5204897/OneDrive - UNSW/Desktop/PhD/Spatial/Data/shp/Blue_Heart_Sites/Blue_Heart_Habitats_Points3_Inun.shp") %>% 
+  rename("ID" = "rand_point") %>% 
+  subset(Habitat_ty != "Marsh") %>% # remove marsh
+  mutate(Habitat_ty = factor(Habitat_ty, ordered = TRUE, levels = c("Supratidal forest", "Mangrove", "Mudflat")))
+
+# append the random numbers onto this - validation only
+samplePtsVal <- right_join(samplePts, InunPtsVal, by = c("ID","Habitat_ty","Inun1"))
+
+# extract what the model said was each habitat
+ModelHab <- extract(monthHab, samplePts) %>% 
+  rename("ModelHabitat" = "sum") # rename confusingly named column
+
+InunPtsValCheck <- inner_join(InunPtsVal, ModelHab, by = "ID") %>% 
+  mutate(ModelHabName = factor(case_when(ModelHabitat == 1 ~ "Supratidal forest",
+                                  #ModelHabitat == 2 ~ "Marsh",
+                                  ModelHabitat == 2 ~ "Mangrove",
+                                  ModelHabitat == 3 ~ "Mudflat",
+                                  .default = NA),ordered = TRUE, levels = c("Supratidal forest", "Mangrove", "Mudflat")),
+         is_equal = case_when(ModelHabName == Habitat_ty ~ TRUE,
+                              .default = FALSE))
+
+# check accuracy
+Overall_accuracy <- sum(InunPtsValCheck$is_equal)/nrow(InunPtsValCheck)*100
+HabitatAcc <- InunPtsValCheck %>% group_by(Habitat_ty) %>% summarise(sum = sum(is_equal),count = n()) %>% 
+  mutate(acc = sum/count * 100)
+ModelAcc <- InunPtsValCheck %>% group_by(ModelHabitat) %>% summarise(sum = sum(is_equal),count = n()) %>% 
+  mutate(acc = sum/count * 100)
+```
+
+Habitat areas in each floodplain.
+
+```{r Habitat areas}
+# load in shapefile if you haven't already above
+blueheartareas <- st_read(here("shp/Blue_Heart_Sites_Hydrodynamics.shp"))
+
+# split raster into three shapefiles, one for each habitat type
+thresholdsSup <- matrix(
+  c(1, 1, 1,
+    1.1, 3, NA),
+  ncol = 3, byrow = TRUE)
+monthHabSup <- monthHab %>% classify(thresholdsSup, include.lowest = TRUE)
+plot(monthHabSup)
+
+thresholdsMan <- matrix(
+  c(1, 1, NA,
+    2, 2, 1,
+    2.1, 3, NA),
+  ncol = 3, byrow = TRUE)
+monthHabMan <- monthHab %>% classify(thresholdsMan, include.lowest = TRUE)
+plot(monthHabMan)
+
+thresholdsMud <- matrix(
+  c(1, 2.1, NA,
+    3, 3, 1),
+  ncol = 3, byrow = TRUE)
+monthHabMud <- monthHab %>% classify(thresholdsMud, include.lowest = TRUE)
+plot(monthHabMud)
+
+
+# intersect shapefile with floodplain areas with the habitat raster 
+
+zonal_stats_Sup <- extract(monthHabSup, blueheartareas, fun='sum', na.rm=TRUE)
+zonal_stats_Man <- extract(monthHabMan, blueheartareas, fun='sum', na.rm=TRUE) # need to divide by 2 as each cell value was 2
+zonal_stats_Mud <- extract(monthHabMud, blueheartareas, fun='sum', na.rm=TRUE) # need to divide by 3 as each cell value was 3
+
+zonal_stats <- full_join(zonal_stats_Sup, zonal_stats_Man, by = "ID") %>% full_join(zonal_stats_Mud, by = "ID") %>% 
+  rename("Supratidal forest" = "sum.x",
+         "Mangrove" = "sum.y",
+         "Mudflat" = "sum") %>% 
+  mutate(Mudflat_area_ha = Mudflat/3*400/10000, # divide each by their raster cell value then multiply by 400 as each cell is 20*20m2 so represents 400m2 then divide by 10000 so it's in ha
+         Mangrove_area_ha = Mangrove/2*400/10000,
+         Supratidal_area_ha = `Supratidal forest`/1*400/10000) %>% 
+  select(-c("Supratidal forest", "Mangrove", "Mudflat"))
+
+
+# subset for only the areas you care about in each scenario
+relevant_nos <- c(4) # substitute whichever areas are relevant to the present scenario
+zonalrelevant <- zonal_stats[relevant_nos,]
+totals <- colSums(zonalrelevant)
+totals
+```
+
+For BlueCAM calculations, need average elevation for mangroves. So also calculate that here.
+
+Do this after running the above chunk.
+
+Note this is using elevations from the DEM, not from the model, so they aren't necessarily accurate given the DEM performs poorly in vegetated areas, and we changed a lot of these elevations for the model.
+
+```{r Habitat elevation}
+crs(monthHabMan) <- crs(DEM) # make CRS compatible
+monthHabMan <- terra::resample(monthHabMan, DEM) #resample for same resolution
+
+DEMMan <- crop(DEM, monthHabMan)
+DEMMan2 <- mask(DEMMan, monthHabMan)
+plot(DEMMan2)
+
+average_DEM <- global(DEMMan2, fun = "mean", na.rm = TRUE)
+average_DEM
+```

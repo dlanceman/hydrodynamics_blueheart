@@ -1,0 +1,10 @@
+---
+title: "Nutrient Calculations"
+author: "Dana Lanceman"
+format: html
+editor: visual
+---
+
+## Nutrient calculations
+
+This document is for analysing Maroochy River long-term and Yandina and Coolum Creek short term water quality datasets, and for estimating how water quality would change with successional tidal restoration.

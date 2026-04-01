@@ -11,6 +11,8 @@ editor_options:
 
 This document is for creating a batch of files to input into RMAPLT to create rasters of depth for each timepoint, and then running each file in RMAPLT to generate rasters, reading back in rasters, converting them to binary (wet/dry) rasters, and summing these rasters to calculate how long each cell is inundated, and therefore total residence times.
 
+Run steps 1-6 iteratively for each scenario, then run step 7 with combined data.
+
 ### 1. Set up
 
 Before we start, load packages.
@@ -21,6 +23,9 @@ library(tidyverse)
 library(terra)
 library(sf)
 library(readxl)
+library(ggpubr)
+library(lubridate)
+library(tsibble)
 ```
 
 Then, load in the text file we're going to edit to create batch files.
@@ -390,7 +395,7 @@ Also plot this over time.
 ```{r PlotInundatedAreas}
 alltime <- read.csv(here(paste0("Output/csv/run0", model, "_summary.csv")))
 
-ggplot(run0082alltime) +
+ggplot(alltime) +
   geom_line(aes(x = Timestep, y = YCW_area_m2), color = "red") +
   geom_line(aes(x = Timestep, y = NaturalNorth_area_m2), color = "blue") +
   geom_line(aes(x = Timestep, y = NaturalSouth_area_m2), color = "green")
@@ -409,7 +414,7 @@ Create a summary over all time. (**this is basically the same as the above**)
 alltimeAreasummary <- alltime %>% select(c("Timestep","Day","Hour","YCW_area_m2","NaturalNorth_area_m2", "NaturalSouth_area_m2")) %>% 
   pivot_longer(cols = c("YCW_area_m2","NaturalNorth_area_m2", "NaturalSouth_area_m2"), names_to = "Floodplain", values_to = "Area") %>% 
   group_by(Floodplain) %>% 
-  summarise(mean = mean(Area), se = sd(Area)/sqrt(nrow(run0082alltime))) # average area per floodplain inundated at any one time
+  summarise(mean = mean(Area), se = sd(Area)/sqrt(nrow(alltime))) # average area per floodplain inundated at any one time
 
 ```
 
@@ -480,7 +485,7 @@ plot(DEMHigh)
 
 
 # next, intersect this DEM with the binary month inundation raster for each scenario to determine which cells are in which category
-Month <- rast(here("Output/raster/run0082/inundated/run0082run0082_sumMonth2.tif"))
+Month <- rast(here("Output/raster/run0082/inundated/inun_sumMonthCrop.tif"))
 crs(Month)
 crs(Month) <- crs(blueheartrelevant)
 crs(Month)
@@ -553,7 +558,8 @@ HighSums <- Inun_fn(InunHigh_reclass)
 
 my_list <- list(Low = LowSums, Mid = MidSums, High = HighSums)
 
-FPElevs <- bind_rows(my_list, .id = "source_name") %>% select(-TimeStep) %>% mutate(
+FPElevs <- bind_rows(my_list, .id = "source_name") 
+FPElevs <- FPElevs %>% select(-TimeStep) %>% mutate(
   YCWPerc = YCW/sum(FPElevs$YCW)*100,
   NNatPerc = NaturalNorth/sum(FPElevs$NaturalNorth)*100,
   SNatPerc = NaturalSouth/sum(FPElevs$NaturalSouth)*100,
@@ -577,13 +583,13 @@ Given we are taking the nitrate value as a constant of 0.05305, this then become
 
 *denitrification, mg/m2/h = e\^(0.5093 (ln (3.05305)) + 0.2067 + (0.0133\*Soil OC%)))*
 
-By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 4.08, Medium (0.5-0.75m) = 3.4, Low (0-0.5m) = 3.04), we get the following results:
+By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 10.5, Medium (0.5-0.75m) = 14.7, Low (0-0.5m) = 13.0), we get the following results:
 
-High elevation: *denitrification, mg/m2/h = 2.1184*
+High elevation: *denitrification, mg/m2/h = 2.1119*
 
-Medium elevation: *denitrification, mg/m2/h = 2.1093*
+Medium elevation: *denitrification, mg/m2/h = 2.1677*
 
-Low elevation: *denitrification, mg/m2/h = 2.1045*
+Low elevation: *denitrification, mg/m2/h = 2.1451*
 
 So, to calculate the amount of denitrification occuring in each floodplain in each timestep, we can use the proportion of the inundated floodplain in each elevation class to multiply the area out by these numbers.
 
@@ -601,17 +607,19 @@ DenitTimestep <- alltime %>% select("Day", "Hour", contains("area")) %>% subset(
                           .default = Hour),
          Day = case_when(Hour == 0 ~ Day + 1,
                          .default = Day),
-    YCWDenit = YCW_area_m2*(as.numeric(FPElevs[1,5]/100))*2.1045/1000 + 
-           YCW_area_m2*(as.numeric(FPElevs[2,5]/100))*2.1093/1000 + 
-           YCW_area_m2*(as.numeric(FPElevs[3,5]/100))*2.1184/1000,
-         NNatDenit = NaturalNorth_area_m2*(as.numeric(FPElevs[1,6]/100))*2.1045/1000 + 
-           NaturalNorth_area_m2*(as.numeric(FPElevs[2,6]/100))*2.1093/1000 + 
-           NaturalNorth_area_m2*(as.numeric(FPElevs[3,6]/100))*2.1184/1000,
-         SNatDenit = NaturalSouth_area_m2*(as.numeric(FPElevs[1,7]/100))*2.1045/1000 + 
-           NaturalSouth_area_m2*(as.numeric(FPElevs[2,7]/100))*2.1093/1000 + 
-           NaturalSouth_area_m2*(as.numeric(FPElevs[3,7]/100))*2.1184/1000,
+    YCWDenit = YCW_area_m2*(as.numeric(FPElevs[1,5]/100))*2.1451/1000 + 
+           YCW_area_m2*(as.numeric(FPElevs[2,5]/100))*2.1677/1000 + 
+           YCW_area_m2*(as.numeric(FPElevs[3,5]/100))*2.1119/1000,
+         NNatDenit = NaturalNorth_area_m2*(as.numeric(FPElevs[1,6]/100))*2.1451/1000 + 
+           NaturalNorth_area_m2*(as.numeric(FPElevs[2,6]/100))*2.1677/1000 + 
+           NaturalNorth_area_m2*(as.numeric(FPElevs[3,6]/100))*2.1119/1000,
+         SNatDenit = NaturalSouth_area_m2*(as.numeric(FPElevs[1,7]/100))*2.1451/1000 + 
+           NaturalSouth_area_m2*(as.numeric(FPElevs[2,7]/100))*2.1677/1000 + 
+           NaturalSouth_area_m2*(as.numeric(FPElevs[3,7]/100))*2.1119/1000,
          TotalDenit = YCWDenit + NNatDenit + SNatDenit,
          DateTime = as.POSIXct(paste0("2023-",floor((Day-31)/100-0.001)+2,"-",Day-31*(floor((Day-31)/100-0.001)+1)," ",floor(Hour),":",(Hour-floor(Hour))*60), "%Y-%m-%d %h:%M"))
+
+write.csv(DenitTimestep, here(paste0("Output/csv/run0",model,"_denit.csv")))
 
 # pivot so that all data are in the same column
 DenitTimestepLong <- DenitTimestep %>% 
@@ -640,6 +648,7 @@ Note to calculate total denitrification, we can only take one denitrification nu
 TotalDenit <- DenitTimestep %>% filter(Hour %in% c(1:24)) %>%  # only select one observation per hour
   select(contains("Denit")) %>% 
   colSums()/1000
+TotalDenit
 ```
 
 ### 6. Convert inundation frequency (hydroperiod) to habitat types
@@ -815,4 +824,202 @@ plot(DEMMan2)
 
 average_DEM <- global(DEMMan2, fun = "mean", na.rm = TRUE)
 average_DEM
+```
+
+### 7. Multi-scenario results
+
+First, load in inputs.
+
+```{r Multi-scenario_inputs}
+# load a file where I compare originally calculated %s of tidal prism with the inundation area we calculated using the hydrodynamic model.
+
+inun <- read_excel(here("Data/TidalPrismInun.xlsx"))
+
+denit1 <- read.csv(here("Output/csv/run0086_denit.csv"))
+denit2 <- read.csv(here("Output/csv/run0083a_denit.csv"))
+denit3 <- read.csv(here("Output/csv/run0087_denit.csv"))
+denit4 <- read.csv(here("Output/csv/run0093a_denit.csv"))
+denit5 <- read.csv(here("Output/csv/run0089_denit.csv"))
+denit6 <- read.csv(here("Output/csv/run0082_denit.csv"))
+denit7 <- read.csv(here("Output/csv/run0090a_denit.csv"))
+denit8 <- read.csv(here("Output/csv/run0092a_denit.csv"))
+denit9 <- read.csv(here("Output/csv/run0139_denit.csv"))
+denit10 <- read.csv(here("Output/csv/run0154_denit.csv"))
+denit11 <- read.csv(here("Output/csv/run0156_denit.csv"))
+
+# put these all in a list for processing.
+
+denit_list <- tibble::lst(denit1,denit2,denit3,denit4,denit5,denit6,denit7,denit8,denit9, denit10,denit11) # named list
+```
+
+Tidal prism vs average inundation extent
+
+```{r Prism_vs_inun}
+PrismInun <- ggplot(inun, aes(`Tidal_prism_%`*100,Inundation_area_model)) +
+  geom_point(size = 5) +
+  geom_smooth(method = "lm") +
+  #geom_smooth(method = "lm", formula = y ~ x + I(x^2)) +
+  stat_cor(label.y = 150, label.x = 40, aes(label = after_stat(rr.label)), size = 12) + # R2 is for linear model, so if non-linear, need to calculate separately
+  xlab("% Tidal Prism (bathtub approach)") +
+  ylab("Average model inundation extent (ha)") +
+  theme_classic() +
+  theme(axis.title = element_text(size = 32),
+        axis.text = element_text(size = 28))
+PrismInun
+
+png(here("Output/fig/PrismInun.png"), width = 1200, height = 800, units = "px") 
+PrismInun
+dev.off()
+
+```
+
+Denitrification - totals.
+
+```{r DenitTotals}
+# create a new list
+denitOnly <- lst()
+
+for(i in seq_along(1:11)){
+  denitOnly[[i]] <- denit_list[[i]] %>% select(DateTime, contains("Denit"))
+  names(denitOnly)[i] <- paste0("Scenario_", i)
+}
+
+denitOnlyDF <- denitOnly %>%
+  reduce(full_join, by = "DateTime")
+
+denitTotals <- denitOnlyDF %>% 
+  select("X5CDenit.x","X1CDenit.x","X1ADenit.x","X1DDenit.x",contains("Total"),DateTime) %>%
+  rename("Scenario 1" = "X5CDenit.x",
+         "Scenario 2" = "X1CDenit.x",
+         "Scenario 3" = "X1ADenit.x",
+         "Scenario 4" = "X1DDenit.x",
+         "Scenario 5" = "TotalDenit.x",
+         "Scenario 6" = "TotalDenit.y",
+         "Scenario 7" = "TotalDenit.x.x",
+         "Scenario 8" = "TotalDenit.y.y",
+         "Scenario 9" = "TotalDenit139",
+         "Scenario 10" = "TotalDenit154.x",
+         "Scenario 11" = "TotalDenit154.y",
+         ) %>% 
+  mutate(DateTime = ymd_hms(DateTime))
+
+denitTotalsLong <- denitTotals %>% pivot_longer(cols = c(contains("Scenario")), names_to = "Scenario", values_to = "Denit") %>% mutate(
+  Scenario = factor(Scenario, ordered = TRUE, levels = c("Scenario 1", "Scenario 2", "Scenario 3", "Scenario 4", "Scenario 5", "Scenario 6", "Scenario 7", "Scenario 8", "Scenario 9", "Scenario 10", "Scenario 11"))
+)
+
+TotalDenitPlot <- ggplot(denitTotalsLong, aes(x = DateTime, y = Denit/1000, color = Scenario)) +
+  geom_line(linewidth = 1) +
+  theme_classic() +
+  xlab("Date") +
+  ylab("Denitrification (kg/hr)") +
+  theme(axis.title = element_text(size = 40),
+        axis.text = element_text(size = 32),
+        legend.title = element_text(size = 40),
+        legend.text = element_text(size = 32))
+TotalDenitPlot
+
+png(here("Output/fig/DenitTotal.png"), width = 1800, height = 1200, units = "px")
+TotalDenitPlot
+dev.off()
+
+```
+
+Denitrification - compare to inundated areas.
+
+```{r DenitvsInun}
+DenitInun <- ggplot(inun, aes(Inundation_area_model,Denit_model/28)) +
+  geom_point(size = 5) +
+  geom_smooth(method = "lm") +
+  #stat_cor(label.y = 1500, label.x = 100, aes(label = after_stat(rr.label)), size = 12) + 
+  xlab("Average area inundated per day (ha)") +
+  ylab("Average denitrification per day (kg)") +
+  theme_classic() +
+  theme(axis.title = element_text(size = 32),
+        axis.text = element_text(size = 28),
+        plot.margin = margin(1, 0.5, 0.5, 0.5, "cm"))
+DenitInun
+
+png(here("Output/fig/DenitInun.png"), width = 1200, height = 800, units = "px") 
+DenitInun
+dev.off()
+```
+
+Denitrification - single floodplains.
+
+Compare floodplains that are in more than one scenario:
+
+-   1A
+
+-   1C
+
+-   1D
+
+-   3A
+
+-   5C
+
+-   CCCA North
+
+-   CCCA South
+
+```{r FloodplainDenit}
+# function to modify and make plot after subsetting individually
+
+DenitPlot <- function(ShortDF, PlotName){
+  LongDF <- ShortDF %>% pivot_longer(cols = c(contains("Scenario")), names_to = "Scenario", values_to = "Denit") 
+  
+  PlotDF <- ggplot(LongDF, aes(x = DateTime, y = Denit/1000, color = Scenario)) +
+  geom_line(linewidth = 0.5) +
+  theme_classic() +
+  xlab("Date") +
+  ylab("Denitrification (kg/hr)") +
+  theme(axis.title = element_text(size = 12),
+        axis.text = element_text(size = 8),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 8))
+  
+  ggsave(here(paste0("Output/fig/",PlotName,".png")), PlotDF, device = "png", width = 1800, height = 1200, units = "px") }
+
+
+#1A
+denit1A <- denitOnlyDF %>% 
+  select(contains("X1ADenit"),DateTime) %>%
+  rename("Scenario 3" = "X1ADenit.x",
+         "Scenario 7" = "X1ADenit.y",
+         "Scenario 8" = "X1ADenit.x.x",
+         "Scenario 9" = "X1ADenit.y.y",
+         "Scenario 10" = "X1ADenit.x.x.x",
+         "Scenario 11" = "X1ADenit.y.y.y",) %>% 
+  mutate(DateTime = ymd_hms(DateTime))
+
+DenitPlot(denit1A, "denit1A")
+
+
+# 1C
+denit1C <- denitOnlyDF %>% 
+  select(contains("X1CDenit"),DateTime) %>%
+  rename("Scenario 2" = "X1CDenit.x",
+         "Scenario 7" = "X1CDenit.y",
+         "Scenario 8" = "X1CDenit.x.x",
+         "Scenario 9" = "X1CDenit.y.y",
+         "Scenario 10" = "X1CDenit.x.x.x",
+         "Scenario 11" = "X1CDenit.y.y.y") %>% 
+  mutate(DateTime = ymd_hms(DateTime))
+
+DenitPlot(denit1C, "denit1C")
+
+
+# 3A
+denit3A <- denitOnlyDF %>% 
+  select(contains(c("3A", "YCW")),DateTime) %>%
+  rename("Scenario 6" = "YCWDenit.x",
+         "Scenario 7" = "YCWDenit.y",
+         "Scenario 8" = "YCWDenit",
+         "Scenario 9" = "X3ADenit.x",
+         "Scenario 10" = "X3ADenit.y",
+         "Scenario 11" = "X3ADenit") %>% 
+  mutate(DateTime = ymd_hms(DateTime))
+
+DenitPlot(denit3A, "denit3A")
+
 ```
