@@ -1,0 +1,74 @@
+---
+title: "Calculating changes in water quality"
+author: "Dana Lanceman"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+# Calculate changes in water quality
+
+This script takes inundation area time series output from other analyses to estimate the volume of water exchanged on an average tide, and therefore the average volume of water that would undergo denitrification and contribute to changed water quality in the channel.
+
+## 1. Inputs
+
+First, load relevant packages.
+
+```{r get_packages}
+library(tidyverse)
+library(here)
+library(quantmod)
+library(lubridate)
+```
+
+Next, input datasets.
+
+Inundation data.
+
+```{r load_inundation_data}
+# make a function to keep relevant data - time related and inundation area data
+keeprelevant <- function(dataset){
+  dataset %>% 
+  dplyr::select(!contains("creek")) %>% 
+    dplyr::select(c("Timestep", "Day", "Hour", contains("area")))
+}
+
+Inun_S1 <- read_csv(here("Output/csv/run0086_summary.csv"))[,-1] %>% keeprelevant()
+Inun_S2 <- read_csv(here("Output/csv/run0083a_summary.csv"))[,-1] %>% keeprelevant()
+Inun_S3 <- read_csv(here("Output/csv/run0087_summary.csv"))[,-1] %>% keeprelevant()
+Inun_S4 <- read_csv(here("Output/csv/run0093a_summary.csv"))[,-1] %>% keeprelevant()
+Inun_S5 <- read_csv(here("Output/csv/run0089_summary.csv"))[,-1] %>% keeprelevant()
+Inun_S6 <- read_csv(here("Output/csv/run0082_summary.csv"))[,-1] %>% keeprelevant()
+Inun_S7 <- read_csv(here("Output/csv/run0090a_summary.csv"))[,-1] %>% keeprelevant()
+Inun_S8 <- read_csv(here("Output/csv/run0092a_summary.csv"))[,-1] %>% keeprelevant()
+```
+
+Flow velocity data (to calculate the amount of water exchanged in each tide & the proportion coming to Yandina creek compared to other creeks).
+
+Data are stored in the "flow" column and are in m3/s, so need to be converted appropriately to calculate total volumes.
+
+Note, I drew all continuity lines in the wrong direction, so flows entering a wetland are shown as negative values, and vice versa. These can be reversed if it is more logical.
+
+```{r load_velocity_data}
+# function for keeping relevant flow cols & creating a flow column for total volume flowing for the full 15 mins 
+# also cut dataset to the middle 28 days used for modelling
+keeprelevantflow <- function(dataset){
+  dataset %>% 
+    dplyr::select("Time","Flow") %>% 
+    mutate(Flow_m3_15min = Flow * 60 * 15,
+           Time = dmy_hm(Time)) #%>% 
+    #dplyr::filter(Time > )
+}
+
+# scenario 3 (1a)
+scen3_TL <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_topleft.csv")) %>% keeprelevantflow
+```
+
+## 2. Data analysis
+
+First, identify peaks and troughs in the area datasets - we'll use these to calculate the area volume of water exchange in each wetland each tide.
+
+```{r}
+
+```

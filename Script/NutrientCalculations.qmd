@@ -3,8 +3,126 @@ title: "Nutrient Calculations"
 author: "Dana Lanceman"
 format: html
 editor: visual
+editor_options: 
+  chunk_output_type: console
 ---
 
 ## Nutrient calculations
 
 This document is for analysing Maroochy River long-term and Yandina and Coolum Creek short term water quality datasets, and for estimating how water quality would change with successional tidal restoration.
+
+### 1. Set up
+
+Load packages.
+
+```{r Load_packages}
+library(tidyverse)
+library(here)
+library(readxl)
+library(lubridate)
+```
+
+Get data. Note the initial version of Maroochy River gauge data only goes till early 2024 - I am acquiring a newer version at the moment.
+
+Also prepare data. Some data are recorded as the wrong type so change to numeric.
+
+```{r Get_data}
+MaroochyWQ <- read_excel(here("Data/WQ_Maroochy_River_HLW_to2024.xlsx"), sheet = "UseMe") %>% 
+  mutate(Nox_mgL = as.numeric(Nox_mgL),
+         Pheopigments_ugL = as.numeric(Pheopigments_ugL),
+         Total_P_mgL = as.numeric(Total_P_mgL))
+
+ChannelWQ <- read_excel(here("Data/BlueHeart_Nov2024_WaterSampleData.xlsx"), sheet = "WaterSampleWithLab_cleanforpape") %>% 
+  mutate(Temp_degC = as.numeric(Temp_degC),
+         DKP_av = as.numeric(DKP_av),
+         Location = substr(Site, 1, 3))
+
+Ch2025WQ <- read_excel(here("Data/Water_quality_drains_2025.xlsx"))
+```
+
+### 2. Explore data
+
+Explore data.
+
+Plot NO3 over time at the Maroochy River.
+
+Plot NOx over the tidal cycle at the three locations we surveyed.
+
+(not yet) Plot NOx with distance downstream each channel.
+
+Plot NOx in 2025.
+
+```{r Plot_NO3}
+ggplot(MaroochyWQ, aes(x = Survey_date, y = Nox_mgL)) +
+  geom_point() +
+  geom_line() +
+  theme_bw()
+
+P2 <- ggplot(ChannelWQ %>% dplyr::filter(Location %in% c("Y1.", "M1.", "C1.")), aes(x = Time, y = `NOX-N_av`, group = Location, color = Location)) +
+  geom_point() +
+  geom_line() +
+  #scale_y_log10() +
+  ylab("Mean NOx (mg/L)") +
+  theme_classic() +
+  theme(axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18))
+P2
+
+ggsave(here("Output/fig/NOx_time.png"), P2, width = 2400, height = 1600, units = "px")
+
+ggplot(Ch2025WQ, aes(x = Date, y = `NOX-N_mgL`, color = Site)) +
+  geom_point()
+```
+
+Compare between restoration scenarios.
+
+Key dates are:
+
+-   pre-2018: no restoration
+
+-   May 2018: 3a (YCW) restoration
+
+-   \~November 2024: 1A, 1B and 1C restoration
+
+```{r Compare_scenarios}
+# make a new column for scenario
+MaroochyWQ <- MaroochyWQ %>% 
+  mutate(Scenario = case_when(
+  Survey_date < as.POSIXct("2018-05-01 00:00:00") ~ "Pre-Restoration",
+  Survey_date < as.POSIXct("2024-07-01 00:00:00")  ~ "3A Restoration Only",
+  Survey_date > as.POSIXct("2024-10-31 00:00:00") ~ "3A, 1A, 1B and 1C Restoration",
+  .default = "Transition"),
+  Month = month(Survey_date),
+  Month_char = month(Survey_date, label = TRUE, abbr = TRUE)
+)
+# note the current dataset doesn't go past early 2024 so doesn't have anything after 3A
+
+# plot distribution of values in each scenario
+ggplot(MaroochyWQ, aes(x = Scenario, y = Nox_mgL)) +
+  geom_boxplot()
+
+# make a model to compare scenarios, while accounting for month
+M <- glm(Nox_mgL ~ Month + Scenario, data = MaroochyWQ)
+plot(M) # not normal
+M2 <- glm(log(Nox_mgL) ~ Month + Scenario, data = MaroochyWQ)
+plot(M2) # ok
+M3 <- glm(sqrt(Nox_mgL) ~ Month + Scenario, data = MaroochyWQ)
+plot(M3) # not amazing but better
+
+summary(M3)
+
+# month is significant, summarise stats for NO3 in each month
+NO3_by_month <- MaroochyWQ %>% group_by(Month_char) %>% summarise(mean = mean(Nox_mgL), min = min(Nox_mgL), max = max(Nox_mgL), median = median(Nox_mgL))
+
+# also plot by month
+P <- ggplot(MaroochyWQ, aes(x = Month_char, y = Nox_mgL, group = Month)) +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Month") +
+  ylab("NOx (mg/L)") +
+  theme(axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18))
+P
+
+ggsave(here("Output/fig/NutByMonth.png"), width = 2400, height = 1600, units = "px", P)
+```
