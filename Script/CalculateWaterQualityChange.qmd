@@ -18,8 +18,11 @@ First, load relevant packages.
 ```{r get_packages}
 library(tidyverse)
 library(here)
-library(quantmod)
+library(pracma)
 library(lubridate)
+
+# also turn off scientific notation (personal preference)
+options(scipen = 999)
 ```
 
 Next, input datasets.
@@ -48,7 +51,7 @@ Flow velocity data (to calculate the amount of water exchanged in each tide & th
 
 Data are stored in the "flow" column and are in m3/s, so need to be converted appropriately to calculate total volumes.
 
-Note, I drew all continuity lines in the wrong direction, so flows entering a wetland are shown as negative values, and vice versa. These can be reversed if it is more logical.
+Note, I drew all continuity lines in the wrong direction, so flows entering a wetland are shown as negative values, and vice versa. These is reversed when calculating volumes with the negative sign below.
 
 ```{r load_velocity_data}
 # function for keeping relevant flow cols & creating a flow column for total volume flowing for the full 15 mins 
@@ -56,19 +59,166 @@ Note, I drew all continuity lines in the wrong direction, so flows entering a we
 keeprelevantflow <- function(dataset){
   dataset %>% 
     dplyr::select("Time","Flow") %>% 
-    mutate(Flow_m3_15min = Flow * 60 * 15,
-           Time = dmy_hm(Time)) #%>% 
-    #dplyr::filter(Time > )
+    mutate(Flow_m3_15min = -Flow * 60 * 15,
+           Time = dmy_hm(Time)) %>% 
+    dplyr::filter(Time > "2023-01-17 00:00:00") %>% 
+    dplyr::filter(Time < "2023-02-14 00:00:00")
 }
 
+# scenario 2 - I flagged this might be from the wrong run, so check or recalculate to make sure it's right (1c)
+scen2_1c_MR <- read_csv(here("Data/ModelFlow/scenario2_checkfromcorrectrun/volumes_1c_bottom_mr.csv")) %>% keeprelevantflow
+scen2_1c_YC <- read_csv(here("Data/ModelFlow/scenario2_checkfromcorrectrun/volumes_1c_top_yc.csv")) %>% keeprelevantflow
+
 # scenario 3 (1a)
-scen3_TL <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_topleft.csv")) %>% keeprelevantflow
+scen3_TL_cc <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_topleft.csv")) %>% keeprelevantflow
+scen3_TR_cc <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_topright.csv")) %>% keeprelevantflow
+scen3_BL_yc <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_bottomleft.csv")) %>% keeprelevantflow
+scen3_BR_yc <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_bottomright.csv")) %>% keeprelevantflow
+
+# scenario 5 (northern natural area)
+scen5_TM_cc <- read_csv(here("Data/ModelFlow/scenario5/volumes_nnat_middle_n_cc.csv")) %>% keeprelevantflow
+scen5_TR_cc <- read_csv(here("Data/ModelFlow/scenario5/volumes_nnat_right_n_cc.csv")) %>% keeprelevantflow
+scen5_S_yc <- read_csv(here("Data/ModelFlow/scenario5/volumes_nnat_s_yc.csv")) %>% keeprelevantflow
+
+# scenario 6 (1c and Nnat)
+scen6_1c_MR <- read_csv(here("Data/ModelFlow/scenario6/volumes_1c_bottom_mr.csv")) %>% keeprelevantflow
+scen6_1c_YC <- read_csv(here("Data/ModelFlow/scenario6/volumes_1c_top_yc.csv")) %>% keeprelevantflow
+scen6_Nnat_yc <- read_csv(here("Data/ModelFlow/scenario6/volumes_nnat_bottom_yc.csv")) %>% keeprelevantflow
+scen6_Nnat_TM_cc <- read_csv(here("Data/ModelFlow/scenario6/volumes_nnat_top_cc.csv")) %>% keeprelevantflow
+scen6_Nnat_TR_cc <- read_csv(here("Data/ModelFlow/scenario6/volumes_nnat_topeast_cc.csv")) %>% keeprelevantflow
+
+# scenario 7 (1a, 1c and Nnat)
+scen7_1c_MR <- read_csv(here("Data/ModelFlow/scenario7/volumes_1c_s_mr.csv")) %>% keeprelevantflow
+scen7_1c_YC <- read_csv(here("Data/ModelFlow/scenario7/volumes_1c_n_yc.csv")) %>% keeprelevantflow
+scen7_Nnat_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_nnat_s_yc.csv")) %>% keeprelevantflow
+scen7_Nnat_TM_cc <- read_csv(here("Data/ModelFlow/scenario7/volumes_nnat_n_cc.csv")) %>% keeprelevantflow
+scen7_Nnat_TR_cc <- read_csv(here("Data/ModelFlow/scenario7/volumes_nnat_east_cc.csv")) %>% keeprelevantflow
+scen7_TL_cc <- read_csv(here("Data/ModelFlow/scenario7/volumes_1a_topleft.csv")) %>% keeprelevantflow
+scen7_TR_cc <- read_csv(here("Data/ModelFlow/scenario7/volumes_1a_topright.csv")) %>% keeprelevantflow
+scen7_BL_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_1a_bottomleft.csv")) %>% keeprelevantflow
+scen7_BR_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_1a_bottomright.csv")) %>% keeprelevantflow
+
+
+# scenario 8 (1a, 1c/1b and Nnat)
+scen8_1c_MR <- read_csv(here("Data/ModelFlow/scenario8/volumes_1c_s_mr.csv")) %>% keeprelevantflow
+scen8_1c1b_YC <- read_csv(here("Data/ModelFlow/scenario8/volumes_1c1b_yc.csv")) %>% keeprelevantflow
+scen8_Nnat_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_nnat_bottom_yc.csv")) %>% keeprelevantflow
+scen8_Nnat_TM_cc <- read_csv(here("Data/ModelFlow/scenario8/volumes_nnat_top_cc.csv")) %>% keeprelevantflow
+scen8_Nnat_TR_cc <- read_csv(here("Data/ModelFlow/scenario8/volumes_nnat_east_cc.csv")) %>% keeprelevantflow
+scen8_TL_cc <- read_csv(here("Data/ModelFlow/scenario8/volumes_1a_topleft.csv")) %>% keeprelevantflow
+scen8_TR_cc <- read_csv(here("Data/ModelFlow/scenario8/volumes_1a_topright.csv")) %>% keeprelevantflow
+scen8_BL_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_1a_bottomleft.csv")) %>% keeprelevantflow
+scen8_BR_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_1a_bottomright.csv")) %>% keeprelevantflow
 ```
 
 ## 2. Data analysis
 
-First, identify peaks and troughs in the area datasets - we'll use these to calculate the area volume of water exchange in each wetland each tide.
+First, identify peaks and troughs in the area datasets - we'll use these to calculate the average volume of water exchange in each wetland each tide.
 
-```{r}
+-   use the findpeaks function in the pracma package to find peaks and troughs (negative peaks) in each series - these are the low and high tide volumes
 
+-   we care about all peaks and troughs, regardless of magnitude. Where it turns around represents a change in tide. However, sometimes the data jump a little around, and we don't want this many points to be identified as potential peaks. So need to have a small threshold value. Visually, it looks like all peaks and troughs are at the very least +-50 m3, and at least 20 timesteps apart between successive peaks or troughs, so let's make those the thresholds (this also creates a time series that always alternates between peaks and troughs, rather than multiple of one in a row, which wouldn't make sense).
+
+First, test the method on a single dataset. One of the channel/floodplain connections at 1a in Scenario 3.
+
+```{r test_peaks_troughs}
+# visualise what a dataset looks like
+ggplot(scen3_TL_cc, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen3_TL_cc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks and troughs
+peaks <- findpeaks(scen3_TL_cc$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20)
+troughs <- -findpeaks(-scen3_TL_cc$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+# ON SECOND THOUGHTS, I DONT THINK THIS PARAGRAPH IS RELEVANT
+# create a table that summarises the mean volume in, mean volume out and mean difference between inputs and outputs
+# calculate the average volume exchanged (mean_diff) by calculating the difference between the average low tide volume and average high tide volume
+#table <- tibble(mean_peak = mean(peaks),
+#                mean_trough = mean(troughs),
+#               mean_diff = mean(peaks) - mean(troughs))
+
+# we actually care about volume exchange each tide, not difference in flow rate.
+# can use the number of peaks identified to determine the average input and output flow. input flow is summing all positive velocities (total volume in over the 28 days) and dividing by the number of peaks (number of high tides)
+positives <- scen3_TL_cc %>% dplyr::filter(Flow_m3_15min>0)
+negatives <- scen3_TL_cc %>% dplyr::filter(Flow_m3_15min<0)
+
+table2 <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / nrow(peaks),
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / nrow(troughs),
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+
+    # also calculate the average duration of each high tide as the amount of time that denitrification can act on the water (the duration of low tides is the amount of time denitrification can act on water sitting on the wetland at low tide, so is also important). Each row in the positives/negatives dataframes represents 15 minutes, so divide the number of rows by 4 to get the number of hours, and then divide this by the number of peaks to get the average duration (in hours) of each high or low tide
+  table2$peaktime <- nrow(positives)/4/nrow(peaks)
+  table2$troughtime <- nrow(negatives)/4/nrow(troughs)
+  
+ggplot(Inun_S3[1:200,], aes(x = Timestep, y = `1A_area_m2`)) +
+  geom_line() 
+ggplot(scen3_TL_cc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+```
+
+Make this into a function
+
+```{r peaks_function}
+peaks_function <- function(dataset){
+  # visualise what a dataset looks like
+  ggplot(dataset, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+  # closer inspection of first 200 points
+  ggplot(dataset[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+  # identify peaks and troughs
+  peaks <- findpeaks(dataset$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20)
+  troughs <- -findpeaks(-dataset$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+  # we care about volume exchange each tide
+  # can use the number of peaks identified to determine the average input and output flow. input flow is summing all positive velocities (total volume in over the 28 days) and dividing by the number of peaks (number of high tides)
+
+  positives <- dataset %>% dplyr::filter(Flow_m3_15min>0)
+  negatives <- dataset %>% dplyr::filter(Flow_m3_15min<0)
+
+  table2 <- tibble(ntides = nrow(peaks),
+                   tide_vol_in = sum(positives$Flow_m3_15min) / nrow(peaks),
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / nrow(troughs),
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+  
+    # also calculate the average duration of each high tide as the amount of time that denitrification can act on the water (the duration of low tides is the amount of time denitrification can act on water sitting on the wetland at low tide, so is also important). Each row in the positives/negatives dataframes represents 15 minutes, so divide the number of rows by 4 to get the number of hours, and then divide this by the number of peaks to get the average duration (in hours) of each high or low tide
+  table2$peaktime <- nrow(positives)/4/nrow(peaks)
+  table2$troughtime <- nrow(negatives)/4/nrow(troughs)
+
+}
+```
+
+Also create a function to use the above function to summarise stats for each wetland.
+
+```{r wetland_specific_function}
+
+```
+
+Now execute function for each dataset. Note, the function does not output plots, just the calculation of the difference between peaks and troughs. Would need to edit for it to do that.
+
+Calculate the proportion of exchanged volume occurring at Yandina Creek (compared to Coolum Creek).
+
+```{r execute_peaks_function}
+# scenario 3 - 1a
+S3_1a_CC1 <- peaks_function(scen3_TL_cc)
+S3_1a_CC2 <- peaks_function(scen3_TR_cc)
+S3_1a_YC1 <- peaks_function(scen3_BL_yc)
+S3_1a_YC2 <- peaks_function(scen3_BR_yc)
+
+S3_1a_CC_in_per_tide <- (S3_1a_CC1$tide_vol_in + S3_1a_CC2$tide_vol_in)
+S3_1a_YC_in_per_tide <- (S3_1a_YC1$tide_vol_in + S3_1a_YC2$tide_vol_in)
+S3_1a_CC_out_per_tide <- (S3_1a_CC1$tide_vol_out + S3_1a_CC2$tide_vol_out)
+S3_1a_YC_out_per_tide <- (S3_1a_YC1$tide_vol_out + S3_1a_YC2$tide_vol_out)
+
+S3_proportion_in_YC_1a <- (S3_1a_YC_in_per_tide)/
+  (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide)
+S3_proportion_in_YC_1a 
+S3_proportion_out_YC_1a <- (S3_1a_YC_out_per_tide)/
+  (S3_1a_YC_out_per_tide + S3_1a_CC_out_per_tide)
+S3_proportion_out_YC_1a 
 ```
