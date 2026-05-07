@@ -157,13 +157,6 @@ Make this into a function
 
 ```{r peaks_function}
 peaks_function <- function(dataset){
-  # visualise what a dataset looks like
-  ggplot(dataset, aes(x = Time, y = Flow_m3_15min)) +
-  geom_line()
-  # closer inspection of first 200 points
-  ggplot(dataset[1:200,], aes(x = Time, y = Flow_m3_15min)) +
-  geom_line() 
-
   # identify peaks and troughs
   peaks <- findpeaks(dataset$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20)
   troughs <- -findpeaks(-dataset$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
@@ -188,17 +181,15 @@ peaks_function <- function(dataset){
 }
 ```
 
-Also create a function to use the above function to summarise stats for each wetland.
-
-```{r wetland_specific_function}
-
-```
-
 Now execute function for each dataset. Note, the function does not output plots, just the calculation of the difference between peaks and troughs. Would need to edit for it to do that.
 
 Calculate the proportion of exchanged volume occurring at Yandina Creek (compared to Coolum Creek).
 
-```{r execute_peaks_function}
+Create blocks for each scenario.
+
+Scenario 3 (test scenario)
+
+```{r execute_peaks_function_scenario_3}
 # scenario 3 - 1a
 S3_1a_CC1 <- peaks_function(scen3_TL_cc)
 S3_1a_CC2 <- peaks_function(scen3_TR_cc)
@@ -224,11 +215,148 @@ mean(Inun_S3$`1A_area_m2`)
 # 19.8 ha
 ```
 
+Scenario 1
+
+!! Need to collect data on volumes in and out for scenarios 1 and 4.
+
+```{r}
+
+```
+
+Scenario 2
+
+!! Needs help, only has volumes in for one channel and out for the other. so the code doesn't work. Make sure this is realistic first and also check these data were from the right scenario as that was in question.
+
+```{r execute_peaks_function_scenario_2}
+#S2_1c_MR <- peaks_function(scen2_1c_MR) 
+#S2_1c_YC <- peaks_function(scen2_1c_YC) 
+#
+#S2_1c_MR_in_per_tide <- S2_1c_MR$tide_vol_in 
+#S2_1c_YC_in_per_tide <- S2_1c_YC$tide_vol_in
+#S2_1c_MR_out_per_tide <- S2_1c_MR$tide_vol_out  
+#S2_1c_YC_out_per_tide <- S2_1c_YC$tide_vol_out
+```
+
+Scenario 4
+
+!! Need to collect data on volumes in and out for scenarios 1 and 4.
+
+```{r}
+
+```
+
+Scenario 5
+
+```{r peaks_scenario_5}
+# scenario 5 - CCCAN
+S5_CCCAN_CC1 <- peaks_function(scen5_TM_cc)
+S5_CCCAN_CC2 <- peaks_function(scen5_TR_cc)
+S5_CCCAN_YC <- peaks_function(scen5_S_yc)
+
+S5_CCCAN_CC_in_per_tide <- (S5_CCCAN_CC1$tide_vol_in + S5_CCCAN_CC2$tide_vol_in)
+S5_CCCAN_YC_in_per_tide <- S5_CCCAN_YC$tide_vol_in
+S5_CCCAN_CC_out_per_tide <- (S5_CCCAN_CC1$tide_vol_out + S5_CCCAN_CC2$tide_vol_out)
+S5_CCCAN_YC_out_per_tide <- S5_CCCAN_YC$tide_vol_out
+```
+
+Scenario 6
+
+```{r peaks_scenario_6}
+# scenario 6 - 1c
+#S6_1c_MR <- peaks_function(scen6_1c_MR)
+#S6_1c_YC <- peaks_function(scen6_1c_YC)
+#
+#S6_1c_MR_in_per_tide <- S6_1c_MR$tide_vol_in
+#S6_1c_YC_in_per_tide <- S6_1c_YC$tide_vol_in
+#S6_1c_MR_out_per_tide <- S6_1c_MR$tide_vol_out 
+#S6_1c_YC_out_per_tide <- S6_1c_YC$tide_vol_out
+
+# issue with 1c flowing in only one direction!
+
+# scenario 6 - CCCAN
+S6_CCCAN_CC1 <- peaks_function(scen6_Nnat_TM_cc)
+S6_CCCAN_CC2 <- peaks_function(scen6_Nnat_TR_cc)
+S6_CCCAN_YC <- peaks_function(scen6_Nnat_yc)
+
+S6_CCCAN_CC_in_per_tide <- (S6_CCCAN_CC1$tide_vol_in + S6_CCCAN_CC2$tide_vol_in)
+S6_CCCAN_YC_in_per_tide <- S6_CCCAN_YC$tide_vol_in
+S6_CCCAN_CC_out_per_tide <- (S6_CCCAN_CC1$tide_vol_out + S6_CCCAN_CC2$tide_vol_out)
+S6_CCCAN_YC_out_per_tide <- S6_CCCAN_YC$tide_vol_out
+```
+
+Scenario 7
+
+```{r peaks_scenario_7}
+# scenario 7 - 1a
+S7_1a_CC1 <- peaks_function(scen7_TL_cc)
+S7_1a_CC2 <- peaks_function(scen7_TR_cc)
+S7_1a_YC1 <- peaks_function(scen7_BL_yc)
+S7_1a_YC2 <- peaks_function(scen7_BR_yc)
+
+S7_1a_CC_in_per_tide <- (S7_1a_CC1$tide_vol_in + S7_1a_CC2$tide_vol_in)
+S7_1a_YC_in_per_tide <- (S7_1a_YC1$tide_vol_in + S7_1a_YC2$tide_vol_in)
+S7_1a_CC_out_per_tide <- (S7_1a_CC1$tide_vol_out + S7_1a_CC2$tide_vol_out)
+S7_1a_YC_out_per_tide <- (S7_1a_YC1$tide_vol_out + S7_1a_YC2$tide_vol_out)
+
+# scenario 7 - 1c
+S7_1c_MR <- peaks_function(scen7_1c_MR)
+S7_1c_YC <- peaks_function(scen7_1c_YC)
+
+S7_1c_MR_in_per_tide <- S7_1c_MR$tide_vol_in
+S7_1c_YC_in_per_tide <- S7_1c_YC$tide_vol_in
+S7_1c_MR_out_per_tide <- S7_1c_MR$tide_vol_out 
+S7_1c_YC_out_per_tide <- S7_1c_YC$tide_vol_out
+
+# scenario 7 - CCCAN
+S7_CCCAN_CC1 <- peaks_function(scen7_Nnat_TM_cc)
+S7_CCCAN_CC2 <- peaks_function(scen7_Nnat_TR_cc)
+S7_CCCAN_YC <- peaks_function(scen7_Nnat_yc)
+
+S7_CCCAN_CC_in_per_tide <- (S7_CCCAN_CC1$tide_vol_in + S7_CCCAN_CC2$tide_vol_in)
+S7_CCCAN_YC_in_per_tide <- S7_CCCAN_YC$tide_vol_in
+S7_CCCAN_CC_out_per_tide <- (S7_CCCAN_CC1$tide_vol_out + S7_CCCAN_CC2$tide_vol_out)
+S7_CCCAN_YC_out_per_tide <- S7_CCCAN_YC$tide_vol_out
+```
+
+Scenario 8
+
+```{r peaks_scenario_8}
+# scenario 8 - 1a
+S8_1a_CC1 <- peaks_function(scen8_TL_cc)
+S8_1a_CC2 <- peaks_function(scen8_TR_cc)
+S8_1a_YC1 <- peaks_function(scen8_BL_yc)
+S8_1a_YC2 <- peaks_function(scen8_BR_yc)
+
+S8_1a_CC_in_per_tide <- (S8_1a_CC1$tide_vol_in + S8_1a_CC2$tide_vol_in)
+S8_1a_YC_in_per_tide <- (S8_1a_YC1$tide_vol_in + S8_1a_YC2$tide_vol_in)
+S8_1a_CC_out_per_tide <- (S8_1a_CC1$tide_vol_out + S8_1a_CC2$tide_vol_out)
+S8_1a_YC_out_per_tide <- (S8_1a_YC1$tide_vol_out + S8_1a_YC2$tide_vol_out)
+
+# scenario 8- 1c 1b
+S8_1c_MR <- peaks_function(scen8_1c_MR)
+S8_1c1b_YC <- peaks_function(scen8_1c1b_YC)
+
+S8_1c_MR_in_per_tide <- S8_1c_MR$tide_vol_in
+S8_1c1b_YC_in_per_tide <- S8_1c1b_YC$tide_vol_in
+S8_1c_MR_out_per_tide <- S8_1c_MR$tide_vol_out 
+S8_1c1b_YC_out_per_tide <- S8_1c1b_YC$tide_vol_out
+
+# scenario 8 - CCCAN
+S8_CCCAN_CC1 <- peaks_function(scen8_Nnat_TM_cc)
+S8_CCCAN_CC2 <- peaks_function(scen8_Nnat_TR_cc)
+S8_CCCAN_YC <- peaks_function(scen8_Nnat_yc)
+
+S8_CCCAN_CC_in_per_tide <- (S8_CCCAN_CC1$tide_vol_in + S8_CCCAN_CC2$tide_vol_in)
+S8_CCCAN_YC_in_per_tide <- S8_CCCAN_YC$tide_vol_in
+S8_CCCAN_CC_out_per_tide <- (S8_CCCAN_CC1$tide_vol_out + S8_CCCAN_CC2$tide_vol_out)
+S8_CCCAN_YC_out_per_tide <- S8_CCCAN_YC$tide_vol_out
+```
+
 Create an output table summarising all information for each scenario.
 
 **Note for denitrification:**
 
-According to Keith et al. 2025, the equation for denitrification in the Blue Heart is:
+According to Keith et al. 2025 (Fern's latest report), the equation for denitrification in the Blue Heart is:
 
 *Log (denitrification, mg/m2/h) = 0.5093 (log (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
 
@@ -250,71 +378,8 @@ Medium elevation: *denitrification, mg/m2/h = 2.6498*
 
 Low elevation: *denitrification, mg/m2/h = 2.5905*
 
-```{r Output_table}
+```{r Output_table_setup}
 # create an empty dataframe
-df <- data.frame(Scenario = character(), # 1
-                 Floodplain = character(),  # 2
-                 Input_vol_YC_m3 = numeric(), # 3
-                 Input_vol_other_m3 = numeric(), # 4
-                 Input_vol_total_m3 = numeric(), # 5
-                 Input_conc_NOx = numeric(),# 6
-                 Total_input_NOx_kg = numeric(), # 7
-                 Inun_area_ha = numeric(), # 8
-                 Inun_area_low = numeric(), # 9
-                 Inun_area_med = numeric(), # 10
-                 Inun_area_high = numeric(), # 11
-                 Denit_potential_kg_12hr = numeric(), # 12
-                 Final_wetland_NOx_kg = numeric(), # 13
-                 Output_NOx_conc = numeric(), # 14 
-                 Output_vol_YC_m3 = numeric(), # 15
-                 Channel_vol_no_denit_m3 = numeric(), # 16
-                 Channel_vol_w_denit_m3 = numeric(), # 17
-                 Final_channel_NOx_conc = numeric()) # 18
-
-# fill in a row with a scenario and floodplain
-df[1,] <- c("Scenario 3", # 1
-            "1a",  # 2
-            S3_1a_YC_in_per_tide, # 3 
-            S3_1a_CC_in_per_tide,  # 4
-            S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide,  # 5
-            0.076, #6
-            0.076 * (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide) * 1000 / 1000000, #7
-            mean(Inun_S3$`1A_area_m2`), #8
-            mean(Inun_S3$`1A_area_m2`) * 0.763, #9 
-            mean(Inun_S3$`1A_area_m2`) * 0.177, #10
-            mean(Inun_S3$`1A_area_m2`) * 0.6, #11
-            (mean(Inun_S3$`1A_area_m2`) * 0.763 * 2.5058 + 
-              mean(Inun_S3$`1A_area_m2`) * 0.177 * 2.6498 +
-              mean(Inun_S3$`1A_area_m2`) * 0.6 * 2.5905)/1000000*12, # 12
-            0.076 * (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide)* 1000 / 1000000 - 
-              (mean(Inun_S3$`1A_area_m2`) * 0.763 * 2.5058 +
-              mean(Inun_S3$`1A_area_m2`) * 0.177 * 2.6498 +
-              mean(Inun_S3$`1A_area_m2`) * 0.6 * 2.5905), # 13
-            (0.076 * (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide)*1000 / 1000000 - 
-              (mean(Inun_S3$`1A_area_m2`) * 0.763 * 2.5058 +
-              mean(Inun_S3$`1A_area_m2`) * 0.177 * 2.6498 +
-              mean(Inun_S3$`1A_area_m2`) * 0.6 * 2.5905)) * 1000000 / 
-              (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide), # 14
-            S3_1a_YC_out_per_tide, # 15
-            55290, # 16
-            22300, # 17
-            (55290 * 0.076 +
-              22300 * 0 +
-               S3_1a_YC_out_per_tide *
-               ((0.076 * (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide)*1000 / 1000000 - 
-              (mean(Inun_S3$`1A_area_m2`) * 0.763 * 2.5058 +
-              mean(Inun_S3$`1A_area_m2`) * 0.177 * 2.6498 +
-              mean(Inun_S3$`1A_area_m2`) * 0.6 * 2.5905)) * 1000000 / 
-              (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide)))/(55290 + 22300 + S3_1a_YC_out_per_tide) # 18
-            )
-
-df <- df %>% mutate(Final_wetland_NOx_kg = 
-                      case_when(Final_wetland_NOx_kg < 0 ~ 0,
-                      .default = Final_wetland_NOx_kg))
-
-
-
-# only start with columns that don't rely entirely on calculations from other columns.
 df2 <- data.frame(Scenario = character(), # 1
                  Floodplain = character(),  # 2
                  Input_vol_YC_m3 = double(), # 3
@@ -322,10 +387,10 @@ df2 <- data.frame(Scenario = character(), # 1
                  #Input_vol_total_m3 = double(), # 5
                  Input_conc_NOx_mgL = double(),# 6
                  #Total_input_NOx_kg = double(), # 7
-                 Inun_area_ha = double(), # 8
-                 Inun_area_low = double(), # 9
-                 Inun_area_med = double(), # 10
-                 Inun_area_high = double(), # 11
+                 Inun_area_m2 = double(), # 8
+                 Inun_area_low_m2 = double(), # 9
+                 Inun_area_med_m2 = double(), # 10
+                 Inun_area_high_m2 = double(), # 11
                  #Denit_potential_kg_12hr = double(), # 12
                  #Final_wetland_NOx_kg = double(), # 13
                  #Output_NOx_conc = double(), # 14 
@@ -335,27 +400,159 @@ df2 <- data.frame(Scenario = character(), # 1
                  #Final_channel_NOx_conc = double() # 18
                  ) 
 
+
+```
+
+Now add items to the output table based on each scenario.
+
+```{r Output_table_scenarios}
+
+# fill with values specific to scenario 3
 df2 <- df2 %>% add_row(
   Scenario = "Scenario 3", # 1
   Floodplain = "1a",  # 2
   Input_vol_YC_m3 = S3_1a_YC_in_per_tide, # 3 
   Input_vol_other_m3 = S3_1a_CC_in_per_tide,  # 4
   Input_conc_NOx_mgL = 0.076, # 6
-  Inun_area_ha = mean(Inun_S3$`1A_area_m2`), # 8
-  Inun_area_low = mean(Inun_S3$`1A_area_m2`) * 0.763, # 9
-  Inun_area_med = mean(Inun_S3$`1A_area_m2`) * 0.177, # 10
-  Inun_area_high = mean(Inun_S3$`1A_area_m2`) * 0.6, # 11
+  Inun_area_m2 = mean(Inun_S3$`1A_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S3$`1A_area_m2`) * 0.763, # 9
+  Inun_area_med_m2 = mean(Inun_S3$`1A_area_m2`) * 0.177, # 10
+  Inun_area_high_m2 = mean(Inun_S3$`1A_area_m2`) * 0.06, # 11
   Output_vol_YC_m3 = -S3_1a_YC_out_per_tide, # 15
   Channel_vol_no_denit_m3 = 55290, # 16
   Channel_vol_w_denit_m3 = 22300)  # 17
 
+# fill with values specific to scenario 5
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 5", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = S5_CCCAN_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S5_CCCAN_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S5$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S5$NaturalNorth_area_m2) * 0.103, # 9
+  Inun_area_med_m2 = mean(Inun_S5$NaturalNorth_area_m2) * 0.54, # 10
+  Inun_area_high_m2 = mean(Inun_S5$NaturalNorth_area_m2) * 0.357, # 11
+  Output_vol_YC_m3 = -S5_CCCAN_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+# fill with values specific to scenario 6
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 6", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = S6_CCCAN_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S6_CCCAN_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S6$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.101, # 9
+  Inun_area_med_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.539, # 10
+  Inun_area_high_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.361, # 11
+  Output_vol_YC_m3 = -S6_CCCAN_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+# fill with values specific to scenario 7
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "1a",  # 2
+  Input_vol_YC_m3 = S7_1a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S7_1a_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S7$`1A_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S7$`1A_area_m2`) * 0.777, # 9
+  Inun_area_med_m2 = mean(Inun_S7$`1A_area_m2`) * 0.163, # 10
+  Inun_area_high_m2 = mean(Inun_S7$`1A_area_m2`) * 0.06, # 11
+  Output_vol_YC_m3 = -S7_1a_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = S7_CCCAN_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S7_CCCAN_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S7$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S7$NaturalNorth_area_m2) * 0.105, # 9
+  Inun_area_med_m2 = mean(Inun_S7$NaturalNorth_area_m2) * 0.527, # 10
+  Inun_area_high_m2 = mean(Inun_S7$NaturalNorth_area_m2) * 0.368, # 11
+  Output_vol_YC_m3 = -S7_CCCAN_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S7_1c_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S7_1c_MR_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S7$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S7$`1C_area_m2`) * 0.859, # 9
+  Inun_area_med_m2 = mean(Inun_S7$`1C_area_m2`) * 0.089, # 10
+  Inun_area_high_m2 = mean(Inun_S7$`1C_area_m2`) * 0.052, # 11
+  Output_vol_YC_m3 = -S7_1c_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+# fill with values specific to scenario 8
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "1a",  # 2
+  Input_vol_YC_m3 = S8_1a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S8_1a_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S8$`1A_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S8$`1A_area_m2`) * 0.895, # 9
+  Inun_area_med_m2 = mean(Inun_S8$`1A_area_m2`) * 0.052, # 10
+  Inun_area_high_m2 = mean(Inun_S8$`1A_area_m2`) * 0.053, # 11
+  Output_vol_YC_m3 = -S8_1a_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = S8_CCCAN_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S8_CCCAN_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S8$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S8$NaturalNorth_area_m2) * 0.105, # 9
+  Inun_area_med_m2 = mean(Inun_S8$NaturalNorth_area_m2) * 0.525, # 10
+  Inun_area_high_m2 = mean(Inun_S8$NaturalNorth_area_m2) * 0.37, # 11
+  Output_vol_YC_m3 = -S8_CCCAN_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S8_1c1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S8_1c_MR_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S8$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S8$`1C_area_m2`) * 0.884, # 9
+  Inun_area_med_m2 = mean(Inun_S8$`1C_area_m2`) * 0.073, # 10
+  Inun_area_high_m2 = mean(Inun_S8$`1C_area_m2`) * 0.043, # 11
+  Output_vol_YC_m3 = -S8_1c1b_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+```
+
+Now do calculations for the table.
+
+Note, need to do the final channel concentration separately, so we can account for inputs from multiple wetlands.
+
+```{r Table_mutation}
+
+# mutate columns based on other column values and some generic values for high/med/low denitrification rates
 df2 <- df2 %>% mutate(
                 Input_vol_total_m3 = Input_vol_YC_m3 + Input_vol_other_m3, # 5
                 Total_input_NOx_kg = Input_conc_NOx_mgL * Input_vol_total_m3 * 1000 / 1000000, # 7 - * 1000 is to convert from m3 to L and /1000000 is to convert from mg to kg
                 Denit_potential_kg_12hr = 
-             (Inun_area_low * 2.5058 + 
-              Inun_area_med * 2.6498 +
-              Inun_area_high * 2.5905)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
+             (Inun_area_low_m2 * 2.5058 + 
+              Inun_area_med_m2 * 2.6498 +
+              Inun_area_high_m2 * 2.5905)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
                 Final_wetland_NOx_kg = 
                case_when(Total_input_NOx_kg - Denit_potential_kg_12hr > 0 ~ Total_input_NOx_kg - Denit_potential_kg_12hr,
                          .default = 0), # 13 - resulting NOx concentration is zero if potential denitrification is greater than input NOx
@@ -365,9 +562,4 @@ df2 <- df2 %>% mutate(
                Channel_vol_w_denit_m3*1000 * 0 +
                Output_vol_YC_m3*1000 * Output_NOx_conc_mgL) / ((Channel_vol_no_denit_m3 + Channel_vol_w_denit_m3 + Output_vol_YC_m3)*1000) # 18
              )
-
-
-(df2$Channel_vol_no_denit_m3*1000 * df2$Input_conc_NOx_mgL +
-               df2$Channel_vol_w_denit_m3*1000 * 0 +
-               df2$Output_vol_YC_m3*1000 * df2$Output_NOx_conc_mgL) / ((df2$Channel_vol_no_denit_m3 + df2$Channel_vol_w_denit_m3 + df2$Output_vol_YC_m3)*1000)
 ```
