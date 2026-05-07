@@ -133,13 +133,6 @@ ggplot(scen3_TL_cc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
 peaks <- findpeaks(scen3_TL_cc$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20)
 troughs <- -findpeaks(-scen3_TL_cc$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
 
-# ON SECOND THOUGHTS, I DONT THINK THIS PARAGRAPH IS RELEVANT
-# create a table that summarises the mean volume in, mean volume out and mean difference between inputs and outputs
-# calculate the average volume exchanged (mean_diff) by calculating the difference between the average low tide volume and average high tide volume
-#table <- tibble(mean_peak = mean(peaks),
-#                mean_trough = mean(troughs),
-#               mean_diff = mean(peaks) - mean(troughs))
-
 # we actually care about volume exchange each tide, not difference in flow rate.
 # can use the number of peaks identified to determine the average input and output flow. input flow is summing all positive velocities (total volume in over the 28 days) and dividing by the number of peaks (number of high tides)
 positives <- scen3_TL_cc %>% dplyr::filter(Flow_m3_15min>0)
@@ -189,6 +182,8 @@ peaks_function <- function(dataset){
     # also calculate the average duration of each high tide as the amount of time that denitrification can act on the water (the duration of low tides is the amount of time denitrification can act on water sitting on the wetland at low tide, so is also important). Each row in the positives/negatives dataframes represents 15 minutes, so divide the number of rows by 4 to get the number of hours, and then divide this by the number of peaks to get the average duration (in hours) of each high or low tide
   table2$peaktime <- nrow(positives)/4/nrow(peaks)
   table2$troughtime <- nrow(negatives)/4/nrow(troughs)
+  
+  return(table2)
 
 }
 ```
@@ -221,4 +216,10 @@ S3_proportion_in_YC_1a
 S3_proportion_out_YC_1a <- (S3_1a_YC_out_per_tide)/
   (S3_1a_YC_out_per_tide + S3_1a_CC_out_per_tide)
 S3_proportion_out_YC_1a 
+
+
+# what is the average area inundated in any tide (average area inundated in general)
+
+mean(Inun_S3$`1A_area_m2`)
+# 19.8 ha
 ```
