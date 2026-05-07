@@ -223,3 +223,151 @@ S3_proportion_out_YC_1a
 mean(Inun_S3$`1A_area_m2`)
 # 19.8 ha
 ```
+
+Create an output table summarising all information for each scenario.
+
+**Note for denitrification:**
+
+According to Keith et al. 2025, the equation for denitrification in the Blue Heart is:
+
+*Log (denitrification, mg/m2/h) = 0.5093 (log (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
+
+I'm going to assume Log here actually means Ln or Loge.
+
+This can be rearranged as:
+
+*denitrification, mg/m2/h = e\^(0.5093 (ln (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%)))*
+
+Given we are taking the input nitrate value as a constant of **0.076**, this then becomes:
+
+*denitrification, mg/m2/h = e\^(0.5093 (ln (3.076)) + 0.2067 + (0.0133\*Soil OC%)))*
+
+By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 10.5, Medium (0.5-0.75m) = 14.7, Low (0-0.5m) = 13.0), we get the following results:
+
+High elevation: *denitrification, mg/m2/h = 2.5058*
+
+Medium elevation: *denitrification, mg/m2/h = 2.6498*
+
+Low elevation: *denitrification, mg/m2/h = 2.5905*
+
+```{r Output_table}
+# create an empty dataframe
+df <- data.frame(Scenario = character(), # 1
+                 Floodplain = character(),  # 2
+                 Input_vol_YC_m3 = numeric(), # 3
+                 Input_vol_other_m3 = numeric(), # 4
+                 Input_vol_total_m3 = numeric(), # 5
+                 Input_conc_NOx = numeric(),# 6
+                 Total_input_NOx_kg = numeric(), # 7
+                 Inun_area_ha = numeric(), # 8
+                 Inun_area_low = numeric(), # 9
+                 Inun_area_med = numeric(), # 10
+                 Inun_area_high = numeric(), # 11
+                 Denit_potential_kg_12hr = numeric(), # 12
+                 Final_wetland_NOx_kg = numeric(), # 13
+                 Output_NOx_conc = numeric(), # 14 
+                 Output_vol_YC_m3 = numeric(), # 15
+                 Channel_vol_no_denit_m3 = numeric(), # 16
+                 Channel_vol_w_denit_m3 = numeric(), # 17
+                 Final_channel_NOx_conc = numeric()) # 18
+
+# fill in a row with a scenario and floodplain
+df[1,] <- c("Scenario 3", # 1
+            "1a",  # 2
+            S3_1a_YC_in_per_tide, # 3 
+            S3_1a_CC_in_per_tide,  # 4
+            S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide,  # 5
+            0.076, #6
+            0.076 * (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide) * 1000 / 1000000, #7
+            mean(Inun_S3$`1A_area_m2`), #8
+            mean(Inun_S3$`1A_area_m2`) * 0.763, #9 
+            mean(Inun_S3$`1A_area_m2`) * 0.177, #10
+            mean(Inun_S3$`1A_area_m2`) * 0.6, #11
+            (mean(Inun_S3$`1A_area_m2`) * 0.763 * 2.5058 + 
+              mean(Inun_S3$`1A_area_m2`) * 0.177 * 2.6498 +
+              mean(Inun_S3$`1A_area_m2`) * 0.6 * 2.5905)/1000000*12, # 12
+            0.076 * (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide)* 1000 / 1000000 - 
+              (mean(Inun_S3$`1A_area_m2`) * 0.763 * 2.5058 +
+              mean(Inun_S3$`1A_area_m2`) * 0.177 * 2.6498 +
+              mean(Inun_S3$`1A_area_m2`) * 0.6 * 2.5905), # 13
+            (0.076 * (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide)*1000 / 1000000 - 
+              (mean(Inun_S3$`1A_area_m2`) * 0.763 * 2.5058 +
+              mean(Inun_S3$`1A_area_m2`) * 0.177 * 2.6498 +
+              mean(Inun_S3$`1A_area_m2`) * 0.6 * 2.5905)) * 1000000 / 
+              (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide), # 14
+            S3_1a_YC_out_per_tide, # 15
+            55290, # 16
+            22300, # 17
+            (55290 * 0.076 +
+              22300 * 0 +
+               S3_1a_YC_out_per_tide *
+               ((0.076 * (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide)*1000 / 1000000 - 
+              (mean(Inun_S3$`1A_area_m2`) * 0.763 * 2.5058 +
+              mean(Inun_S3$`1A_area_m2`) * 0.177 * 2.6498 +
+              mean(Inun_S3$`1A_area_m2`) * 0.6 * 2.5905)) * 1000000 / 
+              (S3_1a_YC_in_per_tide + S3_1a_CC_in_per_tide)))/(55290 + 22300 + S3_1a_YC_out_per_tide) # 18
+            )
+
+df <- df %>% mutate(Final_wetland_NOx_kg = 
+                      case_when(Final_wetland_NOx_kg < 0 ~ 0,
+                      .default = Final_wetland_NOx_kg))
+
+
+
+# only start with columns that don't rely entirely on calculations from other columns.
+df2 <- data.frame(Scenario = character(), # 1
+                 Floodplain = character(),  # 2
+                 Input_vol_YC_m3 = double(), # 3
+                 Input_vol_other_m3 = double(), # 4
+                 #Input_vol_total_m3 = double(), # 5
+                 Input_conc_NOx_mgL = double(),# 6
+                 #Total_input_NOx_kg = double(), # 7
+                 Inun_area_ha = double(), # 8
+                 Inun_area_low = double(), # 9
+                 Inun_area_med = double(), # 10
+                 Inun_area_high = double(), # 11
+                 #Denit_potential_kg_12hr = double(), # 12
+                 #Final_wetland_NOx_kg = double(), # 13
+                 #Output_NOx_conc = double(), # 14 
+                 Output_vol_YC_m3 = double(), # 15
+                 Channel_vol_no_denit_m3 = double(), # 16
+                 Channel_vol_w_denit_m3 = double() #, # 17
+                 #Final_channel_NOx_conc = double() # 18
+                 ) 
+
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 3", # 1
+  Floodplain = "1a",  # 2
+  Input_vol_YC_m3 = S3_1a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S3_1a_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_ha = mean(Inun_S3$`1A_area_m2`), # 8
+  Inun_area_low = mean(Inun_S3$`1A_area_m2`) * 0.763, # 9
+  Inun_area_med = mean(Inun_S3$`1A_area_m2`) * 0.177, # 10
+  Inun_area_high = mean(Inun_S3$`1A_area_m2`) * 0.6, # 11
+  Output_vol_YC_m3 = -S3_1a_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+df2 <- df2 %>% mutate(
+                Input_vol_total_m3 = Input_vol_YC_m3 + Input_vol_other_m3, # 5
+                Total_input_NOx_kg = Input_conc_NOx_mgL * Input_vol_total_m3 * 1000 / 1000000, # 7 - * 1000 is to convert from m3 to L and /1000000 is to convert from mg to kg
+                Denit_potential_kg_12hr = 
+             (Inun_area_low * 2.5058 + 
+              Inun_area_med * 2.6498 +
+              Inun_area_high * 2.5905)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
+                Final_wetland_NOx_kg = 
+               case_when(Total_input_NOx_kg - Denit_potential_kg_12hr > 0 ~ Total_input_NOx_kg - Denit_potential_kg_12hr,
+                         .default = 0), # 13 - resulting NOx concentration is zero if potential denitrification is greater than input NOx
+                Output_NOx_conc_mgL = (Final_wetland_NOx_kg*1000000) / (Input_vol_total_m3*1000), # 14 
+                Final_channel_NOx_conc_mgL = 
+               (Channel_vol_no_denit_m3*1000 * Input_conc_NOx_mgL +
+               Channel_vol_w_denit_m3*1000 * 0 +
+               Output_vol_YC_m3*1000 * Output_NOx_conc_mgL) / ((Channel_vol_no_denit_m3 + Channel_vol_w_denit_m3 + Output_vol_YC_m3)*1000) # 18
+             )
+
+
+(df2$Channel_vol_no_denit_m3*1000 * df2$Input_conc_NOx_mgL +
+               df2$Channel_vol_w_denit_m3*1000 * 0 +
+               df2$Output_vol_YC_m3*1000 * df2$Output_NOx_conc_mgL) / ((df2$Channel_vol_no_denit_m3 + df2$Channel_vol_w_denit_m3 + df2$Output_vol_YC_m3)*1000)
+```
