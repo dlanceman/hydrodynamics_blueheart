@@ -47,7 +47,7 @@ Inun_S7 <- read_csv(here("Output/csv/run0090a_summary.csv"))[,-1] %>% keepreleva
 Inun_S8 <- read_csv(here("Output/csv/run0092a_summary.csv"))[,-1] %>% keeprelevant()
 ```
 
-Flow velocity data (to calculate the amount of water exchanged in each tide & the proportion coming to Yandina creek compared to other creeks).
+Flow velocity data (to calculate the amount of water exchanged in each tide & the proportion coming to Yandina creek compared to other creeks). I'm not inputting any data from the Southern Natural Area because all of its flows go to Coolum Creek and Maroochy River, so it's not relevant for our Yandina Creek calculations.
 
 Data are stored in the "flow" column and are in m3/s, so need to be converted appropriately to calculate total volumes.
 
@@ -65,9 +65,12 @@ keeprelevantflow <- function(dataset){
     dplyr::filter(Time < "2023-02-14 00:00:00")
 }
 
-# scenario 2 - I flagged this might be from the wrong run, so check or recalculate to make sure it's right (1c)
-scen2_1c_MR <- read_csv(here("Data/ModelFlow/scenario2_checkfromcorrectrun/volumes_1c_bottom_mr.csv")) %>% keeprelevantflow
-scen2_1c_YC <- read_csv(here("Data/ModelFlow/scenario2_checkfromcorrectrun/volumes_1c_top_yc.csv")) %>% keeprelevantflow
+# scenario 1 (5C)
+scen1_5c_YC <- read_csv(here("Data/ModelFlow/scenario1/volumes_scen1_5c.csv")) %>% keeprelevantflow
+
+# scenario 2  (1c)
+scen2_1c_MR <- read_csv(here("Data/ModelFlow/scenario2/volumes_1c_mr_2.csv")) %>% keeprelevantflow
+scen2_1c_YC <- read_csv(here("Data/ModelFlow/scenario2/volumes_1c_yc_2.csv")) %>% keeprelevantflow
 
 # scenario 3 (1a)
 scen3_TL_cc <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_topleft.csv")) %>% keeprelevantflow
@@ -75,19 +78,28 @@ scen3_TR_cc <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_topright.csv")
 scen3_BL_yc <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_bottomleft.csv")) %>% keeprelevantflow
 scen3_BR_yc <- read_csv(here("Data/ModelFlow/scenario3/volumes_1a_bottomright.csv")) %>% keeprelevantflow
 
+# scenario 4 (1D)
+scen4_1D_YC <- read_csv(here("Data/ModelFlow/scenario4/volumes_scen4_1d_top_all.csv")) %>% keeprelevantflow
+
 # scenario 5 (northern natural area)
 scen5_TM_cc <- read_csv(here("Data/ModelFlow/scenario5/volumes_nnat_middle_n_cc.csv")) %>% keeprelevantflow
 scen5_TR_cc <- read_csv(here("Data/ModelFlow/scenario5/volumes_nnat_right_n_cc.csv")) %>% keeprelevantflow
 scen5_S_yc <- read_csv(here("Data/ModelFlow/scenario5/volumes_nnat_s_yc.csv")) %>% keeprelevantflow
 
-# scenario 6 (1c and Nnat)
+# scenario 6 (1c, 3a and Nnat)
 scen6_1c_MR <- read_csv(here("Data/ModelFlow/scenario6/volumes_1c_bottom_mr.csv")) %>% keeprelevantflow
 scen6_1c_YC <- read_csv(here("Data/ModelFlow/scenario6/volumes_1c_top_yc.csv")) %>% keeprelevantflow
+
+scen6_3a_east_yc <- read_csv(here("Data/ModelFlow/scenario6/volumes_scen6_3a_east.csv")) %>% keeprelevantflow
+scen6_3a_south_yc <- read_csv(here("Data/ModelFlow/scenario6/volumes_scen6_3a_south.csv")) %>% keeprelevantflow
+scen6_3a_tl_yc <- read_csv(here("Data/ModelFlow/scenario6/volumes_scen6_3a_tl.csv")) %>% keeprelevantflow
+scen6_3a_top_yc <- read_csv(here("Data/ModelFlow/scenario6/volumes_scen6_3a_top_2.csv")) %>% keeprelevantflow
+
 scen6_Nnat_yc <- read_csv(here("Data/ModelFlow/scenario6/volumes_nnat_bottom_yc.csv")) %>% keeprelevantflow
 scen6_Nnat_TM_cc <- read_csv(here("Data/ModelFlow/scenario6/volumes_nnat_top_cc.csv")) %>% keeprelevantflow
 scen6_Nnat_TR_cc <- read_csv(here("Data/ModelFlow/scenario6/volumes_nnat_topeast_cc.csv")) %>% keeprelevantflow
 
-# scenario 7 (1a, 1c and Nnat)
+# scenario 7 (1a, 1b, 1c, 3a and Nnat)
 scen7_1c_MR <- read_csv(here("Data/ModelFlow/scenario7/volumes_1c_s_mr.csv")) %>% keeprelevantflow
 scen7_1c_YC <- read_csv(here("Data/ModelFlow/scenario7/volumes_1c_n_yc.csv")) %>% keeprelevantflow
 scen7_Nnat_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_nnat_s_yc.csv")) %>% keeprelevantflow
@@ -98,8 +110,16 @@ scen7_TR_cc <- read_csv(here("Data/ModelFlow/scenario7/volumes_1a_topright.csv")
 scen7_BL_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_1a_bottomleft.csv")) %>% keeprelevantflow
 scen7_BR_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_1a_bottomright.csv")) %>% keeprelevantflow
 
+scen7_1b_mid_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_scen7_1b_mid.csv")) %>% keeprelevantflow
+scen7_1b_top_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_scen7_1b_top.csv")) %>% keeprelevantflow
+scen7_3a_east_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_scen7_3a_east.csv")) %>% keeprelevantflow
+scen7_3a_south_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_scen7_3a_south.csv")) %>% keeprelevantflow
+scen7_3a_tl_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_scen7_3a_tl.csv")) %>% keeprelevantflow
+scen7_3a_top_yc <- read_csv(here("Data/ModelFlow/scenario7/volumes_scen7_3a_top.csv")) %>% keeprelevantflow
 
-# scenario 8 (1a, 1c/1b and Nnat)
+
+
+# scenario 8 (1a, 1b, 1c/1b, 1d, 3a and Nnat)
 scen8_1c_MR <- read_csv(here("Data/ModelFlow/scenario8/volumes_1c_s_mr.csv")) %>% keeprelevantflow
 scen8_1c1b_YC <- read_csv(here("Data/ModelFlow/scenario8/volumes_1c1b_yc.csv")) %>% keeprelevantflow
 scen8_Nnat_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_nnat_bottom_yc.csv")) %>% keeprelevantflow
@@ -109,6 +129,14 @@ scen8_TL_cc <- read_csv(here("Data/ModelFlow/scenario8/volumes_1a_topleft.csv"))
 scen8_TR_cc <- read_csv(here("Data/ModelFlow/scenario8/volumes_1a_topright.csv")) %>% keeprelevantflow
 scen8_BL_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_1a_bottomleft.csv")) %>% keeprelevantflow
 scen8_BR_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_1a_bottomright.csv")) %>% keeprelevantflow
+
+scen8_1b_mid_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_scen8_1b_mid.csv")) %>% keeprelevantflow
+scen8_1b_top_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_scen8_1b_top.csv")) %>% keeprelevantflow
+scen8_1d_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_scen8_1d_all.csv")) %>% keeprelevantflow
+scen8_3a_east_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_scen8_3a_east.csv")) %>% keeprelevantflow
+scen8_3a_top_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_scen8_3a_top.csv")) %>% keeprelevantflow
+scen8_3a_tl_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_scen8_3a_tl.csv")) %>% keeprelevantflow
+scen8_3a_south_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_scen8_3a_bottom.csv")) %>% keeprelevantflow
 ```
 
 ## 2. Data analysis
@@ -217,32 +245,32 @@ mean(Inun_S3$`1A_area_m2`)
 
 Scenario 1
 
-!! Need to collect data on volumes in and out for scenarios 1 and 4.
+```{r peak_function_scen1}
+S1_5C_YC <- peaks_function(scen1_5c_YC)
 
-```{r}
-
+S1_5C_YC_in_per_tide <- S1_5C_YC$tide_vol_in
+S1_5C_YC_out_per_tide <- S1_5C_YC$tide_vol_out 
 ```
 
 Scenario 2
 
-!! Needs help, only has volumes in for one channel and out for the other. so the code doesn't work. Make sure this is realistic first and also check these data were from the right scenario as that was in question.
-
 ```{r execute_peaks_function_scenario_2}
-#S2_1c_MR <- peaks_function(scen2_1c_MR) 
-#S2_1c_YC <- peaks_function(scen2_1c_YC) 
-#
-#S2_1c_MR_in_per_tide <- S2_1c_MR$tide_vol_in 
-#S2_1c_YC_in_per_tide <- S2_1c_YC$tide_vol_in
-#S2_1c_MR_out_per_tide <- S2_1c_MR$tide_vol_out  
-#S2_1c_YC_out_per_tide <- S2_1c_YC$tide_vol_out
+S2_1c_MR <- peaks_function(scen2_1c_MR)
+S2_1c_YC <- peaks_function(scen2_1c_YC)
+
+S2_1c_MR_in_per_tide <- S2_1c_MR$tide_vol_in
+S2_1c_YC_in_per_tide <- S2_1c_YC$tide_vol_in
+S2_1c_MR_out_per_tide <- S2_1c_MR$tide_vol_out
+S2_1c_YC_out_per_tide <- S2_1c_YC$tide_vol_out
 ```
 
 Scenario 4
 
-!! Need to collect data on volumes in and out for scenarios 1 and 4.
+```{r peaks_scen4}
+S4_1D_YC <- peaks_function(scen4_1D_YC)
 
-```{r}
-
+S4_1D_YC_in_per_tide <- S4_1D_YC$tide_vol_in
+S4_1D_YC_out_per_tide <- S4_1D_YC$tide_vol_out 
 ```
 
 Scenario 5
@@ -271,7 +299,7 @@ Scenario 6
 #S6_1c_MR_out_per_tide <- S6_1c_MR$tide_vol_out 
 #S6_1c_YC_out_per_tide <- S6_1c_YC$tide_vol_out
 
-# issue with 1c flowing in only one direction!
+# issue with 1c flowing in only one direction! double checked and can confirm this is what's happening.
 
 # scenario 6 - CCCAN
 S6_CCCAN_CC1 <- peaks_function(scen6_Nnat_TM_cc)
@@ -282,6 +310,15 @@ S6_CCCAN_CC_in_per_tide <- (S6_CCCAN_CC1$tide_vol_in + S6_CCCAN_CC2$tide_vol_in)
 S6_CCCAN_YC_in_per_tide <- S6_CCCAN_YC$tide_vol_in
 S6_CCCAN_CC_out_per_tide <- (S6_CCCAN_CC1$tide_vol_out + S6_CCCAN_CC2$tide_vol_out)
 S6_CCCAN_YC_out_per_tide <- S6_CCCAN_YC$tide_vol_out
+
+# scenario 6 - 3A
+S6_3A_east_YC <- peaks_function(scen6_3a_east_yc)
+S6_3A_south_YC <- peaks_function(scen6_3a_south_yc)
+S6_3A_tl_YC <- peaks_function(scen6_3a_tl_yc)
+S6_3A_top_YC <- peaks_function(scen6_3a_top_yc) # not working?? and then makes the below all zero
+
+#S6_3A_YC_in_per_tide <- S6_3A_east_YC$tide_vol_in + S6_3A_south_YC$tide_vol_in + S6_3A_tl_YC$tide_vol_in + S6_3A_top_YC$tide_vol_in
+#S6_3A_YC_out_per_tide <- S6_3A_east_YC$tide_vol_out + S6_3A_south_YC$tide_vol_out + S6_3A_tl_YC$tide_vol_out + S6_3A_top_YC$tide_vol_out
 ```
 
 Scenario 7
