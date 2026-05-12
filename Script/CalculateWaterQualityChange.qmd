@@ -299,7 +299,7 @@ Scenario 6
 #S6_1c_MR_out_per_tide <- S6_1c_MR$tide_vol_out 
 #S6_1c_YC_out_per_tide <- S6_1c_YC$tide_vol_out
 
-# issue with 1c flowing in only one direction! double checked and can confirm this is what's happening.
+# issue with 1c flowing in only one direction! double checked and can confirm this is what's happening. will fix this in its own chunk below.
 
 # scenario 6 - CCCAN
 S6_CCCAN_CC1 <- peaks_function(scen6_Nnat_TM_cc)
@@ -313,12 +313,14 @@ S6_CCCAN_YC_out_per_tide <- S6_CCCAN_YC$tide_vol_out
 
 # scenario 6 - 3A
 S6_3A_east_YC <- peaks_function(scen6_3a_east_yc)
-S6_3A_south_YC <- peaks_function(scen6_3a_south_yc)
+#S6_3A_south_YC <- peaks_function(scen6_3a_south_yc) # not picking up enough peaks. troubleshoot below
 S6_3A_tl_YC <- peaks_function(scen6_3a_tl_yc)
-S6_3A_top_YC <- peaks_function(scen6_3a_top_yc) # not working?? and then makes the below all zero
+#S6_3A_top_YC <- peaks_function(scen6_3a_top_yc) # not working?? and then makes the below all zero. troubleshoot below.
 
 #S6_3A_YC_in_per_tide <- S6_3A_east_YC$tide_vol_in + S6_3A_south_YC$tide_vol_in + S6_3A_tl_YC$tide_vol_in + S6_3A_top_YC$tide_vol_in
 #S6_3A_YC_out_per_tide <- S6_3A_east_YC$tide_vol_out + S6_3A_south_YC$tide_vol_out + S6_3A_tl_YC$tide_vol_out + S6_3A_top_YC$tide_vol_out
+
+# finish 3a in the troubleshooting chunk below!
 ```
 
 Scenario 7
@@ -389,6 +391,113 @@ S8_CCCAN_CC_out_per_tide <- (S8_CCCAN_CC1$tide_vol_out + S8_CCCAN_CC2$tide_vol_o
 S8_CCCAN_YC_out_per_tide <- S8_CCCAN_YC$tide_vol_out
 ```
 
+Scenario 6 has some issues. Let's investigate these line by line in the next chunk.
+
+```{r scenario_6_modified_peaks}
+# scenario 6 - 1c. Split it up and do separate peaks and troughs calculations for each dataset, since it's only flowing one direction.
+
+# flows only going in from MR
+
+# visualise what a dataset looks like - only peaks, no troughs.
+ggplot(scen6_1c_MR, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen6_1c_MR[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks (there are no troughs)
+peaks <- findpeaks(scen6_1c_MR$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20)
+
+# we actually care about volume exchange each tide, not difference in flow rate.
+# can use the number of peaks identified to determine the average input flow. input flow is summing all positive velocities (total volume in over the 28 days) and dividing by the number of peaks (number of high tides)
+positives <- scen3_TL_cc %>% dplyr::filter(Flow_m3_15min>0)
+
+S6_1c_MR <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / nrow(peaks))
+
+    # also calculate the average duration of each high tide as the amount of time that denitrification can act on the water (the duration of low tides is the amount of time denitrification can act on water sitting on the wetland at low tide, so is also important). Each row in the positives/negatives dataframes represents 15 minutes, so divide the number of rows by 4 to get the number of hours, and then divide this by the number of peaks to get the average duration (in hours) of each high or low tide
+  S6_1c_MR$peaktime <- nrow(positives)/4/nrow(peaks)
+  
+  
+# flows only going out into YC
+  
+# visualise what a dataset looks like - troughs only
+ggplot(scen6_1c_YC, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen6_1c_YC[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify troughs
+troughs <- -findpeaks(-scen6_1c_YC$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+# can use the number of peaks identified to determine the average output flow. 
+negatives <- scen6_1c_YC %>% dplyr::filter(Flow_m3_15min<0)
+
+S6_1c_YC <- tibble(ntides = nrow(peaks),
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / nrow(troughs))
+
+  S6_1c_YC$troughtime <- nrow(negatives)/4/nrow(troughs)  
+  
+S6_1c_MR_in_per_tide <- S6_1c_MR$tide_vol_in
+S6_1c_YC_out_per_tide <- S6_1c_YC$tide_vol_out
+
+
+# also investigate what's going on with scen6_3a_top_yc which isn't working above
+# visualise what a dataset looks like
+ggplot(scen6_3a_top_yc, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen6_3a_top_yc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks and troughs - issue was that peak heights are much smaller than our original parameter of 50 minpeakheight. remove this parameter and make it 2 instead.
+peaks <- findpeaks(scen6_3a_top_yc$Flow_m3_15min, minpeakheight = 2, minpeakdistance = 20)
+troughs <- -findpeaks(-scen6_3a_top_yc$Flow_m3_15min, minpeakheight = 2, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+# when calculating the size of each tide, need to account for the fact this dataset only picks up 26 tides where it should pick up roughly double that, because there are periods where there's little tidal action here. therefore, the average tide is half of what we calculate - accounted for by dividing by 2 for tide_vol_in and tide_vol_out, and peaktime and troughtime, below.
+positives <- scen6_3a_top_yc %>% dplyr::filter(Flow_m3_15min>0)
+negatives <- scen6_3a_top_yc %>% dplyr::filter(Flow_m3_15min<0)
+
+S6_3A_top_YC <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / nrow(peaks) / 2,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / nrow(troughs) / 2,
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+
+  S6_3A_top_YC$peaktime <- nrow(positives)/4/nrow(peaks)/2
+  S6_3A_top_YC$troughtime <- nrow(negatives)/4/nrow(troughs)/2
+
+
+
+# also calculate S6_3A_south_YC properly here, as above it didn't pick up enough peaks using the default method.
+  
+# visualise what a dataset looks like - has long sections without peaks/troughs.
+ggplot(scen6_3a_south_yc, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen6_3a_south_yc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks and troughs. the parameters we set are fine, the dataset just doesn't have many peaks and troughs so we'll have to adjust for this below.
+peaks <- findpeaks(scen6_3a_south_yc$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20)
+troughs <- -findpeaks(-scen6_3a_south_yc$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+positives <- scen6_3a_south_yc %>% dplyr::filter(Flow_m3_15min>0)
+negatives <- scen6_3a_south_yc %>% dplyr::filter(Flow_m3_15min<0)
+
+# dividing by 53 rather than the number of peaks or troughs, as this is the approx expected number of high/low tides during this period so accounts for the fact that this dataset sometimes does nothing in a tide and that the average tide would be an average of nothing and something.
+S6_3A_south_YC <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 53,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 53,
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+  
+  
+# now do scen 6 3A calculations
+  
+S6_3A_YC_in_per_tide <- S6_3A_east_YC$tide_vol_in + S6_3A_south_YC$tide_vol_in + S6_3A_tl_YC$tide_vol_in + S6_3A_top_YC$tide_vol_in
+S6_3A_YC_out_per_tide <- S6_3A_east_YC$tide_vol_out + S6_3A_south_YC$tide_vol_out + S6_3A_tl_YC$tide_vol_out + S6_3A_top_YC$tide_vol_out
+```
+
 Create an output table summarising all information for each scenario.
 
 **Note for denitrification:**
@@ -397,7 +506,7 @@ According to Keith et al. 2025 (Fern's latest report), the equation for denitrif
 
 *Log (denitrification, mg/m2/h) = 0.5093 (log (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
 
-I'm going to assume Log here actually means Ln or Loge.
+I'm going to assume Log here actually means Ln or Log(e).
 
 This can be rearranged as:
 
@@ -416,7 +525,7 @@ Medium elevation: *denitrification, mg/m2/h = 2.6498*
 Low elevation: *denitrification, mg/m2/h = 2.5905*
 
 ```{r Output_table_setup}
-# create an empty dataframe
+# create an empty dataframe. commented out lines are lines we will calculate later based on other lines.
 df2 <- data.frame(Scenario = character(), # 1
                  Floodplain = character(),  # 2
                  Input_vol_YC_m3 = double(), # 3
@@ -444,6 +553,36 @@ Now add items to the output table based on each scenario.
 
 ```{r Output_table_scenarios}
 
+# fill with values specific to scenario 1
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 1", # 1
+  Floodplain = "5c",  # 2
+  Input_vol_YC_m3 = S1_5C_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S1$`5C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S1$`5C_area_m2`) * 0.081, # 9
+  Inun_area_med_m2 = mean(Inun_S1$`5C_area_m2`) * 0.265, # 10
+  Inun_area_high_m2 = mean(Inun_S1$`5C_area_m2`) * 0.654, # 11
+  Output_vol_YC_m3 = -S1_5C_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+# fill with values specific to scenario 2
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 2", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S2_1c_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S2_1c_MR_in_per_tide,  # 4 
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S2$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S2$`1C_area_m2`) * 0.859, # 9
+  Inun_area_med_m2 = mean(Inun_S2$`1C_area_m2`) * 0.089, # 10
+  Inun_area_high_m2 = mean(Inun_S2$`1C_area_m2`) * 0.052, # 11
+  Output_vol_YC_m3 = -S2_1c_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
 # fill with values specific to scenario 3
 df2 <- df2 %>% add_row(
   Scenario = "Scenario 3", # 1
@@ -456,6 +595,21 @@ df2 <- df2 %>% add_row(
   Inun_area_med_m2 = mean(Inun_S3$`1A_area_m2`) * 0.177, # 10
   Inun_area_high_m2 = mean(Inun_S3$`1A_area_m2`) * 0.06, # 11
   Output_vol_YC_m3 = -S3_1a_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+# fill with values specific to scenario 4
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 4", # 1
+  Floodplain = "1d",  # 2
+  Input_vol_YC_m3 = S4_1D_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S4$`1D_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S4$`1D_area_m2`) * 0.845, # 9
+  Inun_area_med_m2 = mean(Inun_S4$`1D_area_m2`) * 0.122, # 10
+  Inun_area_high_m2 = mean(Inun_S4$`1D_area_m2`) * 0.032, # 11
+  Output_vol_YC_m3 = -S4_1D_YC_out_per_tide, # 15
   Channel_vol_no_denit_m3 = 55290, # 16
   Channel_vol_w_denit_m3 = 22300)  # 17
 
@@ -480,6 +634,34 @@ df2 <- df2 %>% add_row(
   Floodplain = "CCCAN",  # 2
   Input_vol_YC_m3 = S6_CCCAN_YC_in_per_tide, # 3 
   Input_vol_other_m3 = S6_CCCAN_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S6$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.101, # 9
+  Inun_area_med_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.539, # 10
+  Inun_area_high_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.361, # 11
+  Output_vol_YC_m3 = -S6_CCCAN_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 6", # 1
+  Floodplain = "3a",  # 2
+  Input_vol_YC_m3 = S6_3A_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S6$YCW_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S6$YCW_area_m2) * 0.912, # 9
+  Inun_area_med_m2 = mean(Inun_S6$YCW_area_m2) * 0.077, # 10
+  Inun_area_high_m2 = mean(Inun_S6$YCW_area_m2) * 0.012, # 11
+  Output_vol_YC_m3 = -S6_3A_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 6", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S6_1c_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S6_1c_MR_in_per_tide,  # 4
   Input_conc_NOx_mgL = 0.076, # 6
   Inun_area_m2 = mean(Inun_S6$NaturalNorth_area_m2), # 8
   Inun_area_low_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.101, # 9
