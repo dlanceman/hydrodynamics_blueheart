@@ -120,7 +120,7 @@ P2 <- ggplot(ChannelWQ %>% dplyr::filter(Location %in% c("Y1.", "M1.", "C1.")), 
         axis.text = element_text(size = 18))
 P2
 
-ggsave(here("Output/fig/NOx_time.png"), P2, width = 2400, height = 1600, units = "px")
+#ggsave(here("Output/fig/NOx_time.png"), P2, width = 2400, height = 1600, units = "px")
 
 ggplot(Ch2025WQ, aes(x = Date, y = `NOX-N_mgL`, color = Site)) +
   geom_point()
@@ -162,7 +162,10 @@ plot(M2) # ok
 M3 <- glm(sqrt(Nox_mgL) ~ Month + Scenario, data = MaroochyWQ_E1505)
 plot(M3) # not amazing but better
 
-summary(M3)
+# compare to a model without Scenario
+M3a <- glm(sqrt(Nox_mgL) ~ Month, data = MaroochyWQ_E1505)
+
+anova(M3, M3a)
 
 # month is near significant, summarise stats for NO3 in each month
 NO3_by_month <- MaroochyWQ_E1505 %>% group_by(Month_char) %>% summarise(mean = mean(Nox_mgL), min = min(Nox_mgL), max = max(Nox_mgL), median = median(Nox_mgL))
@@ -181,5 +184,30 @@ P <- ggplot(MaroochyWQ_E1505, aes(x = Month_char, y = Nox_mgL, group = Month)) +
         axis.text = element_text(size = 18))
 P
 
-ggsave(here("Output/fig/NutByMonth.png"), width = 2400, height = 1600, units = "px", P)
+#ggsave(here("Output/fig/NutByMonth.png"), width = 2400, height = 1600, units = "px", P)
+```
+
+We are also interested in typical values of all parameters in the Maroochy River estuary, over time and in specific months.
+
+Let's focus on gauge E1505 because it is closest to our study area.
+
+```{r Maroochy_WQ}
+MaroochyWQ_E1505_all <- MaroochyWQ %>% dplyr::filter(Location == "E01505") %>% 
+  mutate(Year = year(Survey_date),
+         Month = month(Survey_date))
+
+# summarise each parameter that's relevant to our measurements by month
+Maroochy_by_Month <- MaroochyWQ_E1505_all %>% group_by(Month) %>% 
+  summarise(mean_Total_N_mgL = mean(Total_N_mgL, na.rm = TRUE),
+            mean_Ammonia_mgL = mean(Ammonia_mgL, na.rm = TRUE),
+            mean_Organic_N_mgL = mean(Organic_N_mgL, na.rm = TRUE),
+            mean_Nox_mgL = mean(Nox_mgL, na.rm = TRUE),
+            mean_DO_mgL = mean(DO_mgL, na.rm = TRUE),
+            `mean_DO_%` = mean(`DO_saturation_%`, na.rm = TRUE),
+            mean_pH = mean(pH, na.rm = TRUE),
+            mean_Total_P_mgL = mean(Total_P_mgL, na.rm = TRUE),
+            mean_Salinity_gL = mean(Salinity_gL, na.rm = TRUE),
+            mean_Conductivity_mScm = mean(Conductivity_mScm, na.rm = TRUE),
+            mean_Temp_deg = mean(Temp_degC, na.rm = TRUE),
+            mean_Turbidity_NTU = mean(Turbidity_NTU, na.rm = TRUE))
 ```
