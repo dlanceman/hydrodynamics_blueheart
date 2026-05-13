@@ -858,9 +858,9 @@ df2 <- df2 %>% mutate(
                 Input_vol_total_m3 = Input_vol_YC_m3 + Input_vol_other_m3, # 5
                 Total_input_NOx_kg = Input_conc_NOx_mgL * Input_vol_total_m3 * 1000 / 1000000, # 7 - * 1000 is to convert from m3 to L and /1000000 is to convert from mg to kg
                 Denit_potential_kg_12hr = 
-             (Inun_area_low_m2 * 2.5058 + 
+             (Inun_area_low_m2 * 2.5905 + 
               Inun_area_med_m2 * 2.6498 +
-              Inun_area_high_m2 * 2.5905)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
+              Inun_area_high_m2 * 2.5058)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
                 Final_wetland_NOx_kg = 
                case_when(Total_input_NOx_kg - Denit_potential_kg_12hr > 0 ~ Total_input_NOx_kg - Denit_potential_kg_12hr,
                          .default = 0), # 13 - resulting NOx concentration is zero if potential denitrification is greater than input NOx
@@ -893,6 +893,128 @@ df3 <- df3 %>% add_row(Scenario = "Scenario 0",
                        Total_output_NOx_conc_mgL = 0)
 
 df3 <- df3 %>% mutate(Final_channel_NOx_conc_mgL = 
+               (Channel_vol_no_denit_m3*1000 * Input_conc_NOx_mgL +
+               Channel_vol_w_denit_m3*1000 * 0 +
+               Total_output_vol_YC_m3*1000 * Total_output_NOx_conc_mgL) / ((Channel_vol_no_denit_m3 + Channel_vol_w_denit_m3 + Total_output_vol_YC_m3)*1000))
+```
+
+Also try for a couple other input nitrate concentrations.
+
+As a refresh, here is the denitrification equation again.
+
+*Log (denitrification, mg/m2/h) = 0.5093 (log (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
+
+I'm going to assume Log here actually means Ln or Log(e).
+
+This can be rearranged as:
+
+*denitrification, mg/m2/h = e\^(0.5093 (ln (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%)))*
+
+If we take the input nitrate value as a constant of **0.1**, this then becomes:
+
+*denitrification, mg/m2/h = e\^(0.5093 (ln (3.1)) + 0.2067 + (0.0133\*Soil OC%)))*
+
+By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 10.5, Medium (0.5-0.75m) = 14.7, Low (0-0.5m) = 13.0), we get the following results:
+
+High elevation: *denitrification, mg/m2/h = 2.5158*
+
+Medium elevation: *denitrification, mg/m2/h = 2.6603*
+
+Low elevation: *denitrification, mg/m2/h = 2.6008*
+
+```{r water_quality_input_0.1}
+df4 <- df2 %>% 
+  mutate(Input_conc_NOx_mgL = 0.1)
+
+# mutate columns based on other column values and some generic values for high/med/low denitrification rates
+df4 <- df4 %>% mutate(
+                Input_vol_total_m3 = Input_vol_YC_m3 + Input_vol_other_m3, # 5
+                Total_input_NOx_kg = Input_conc_NOx_mgL * Input_vol_total_m3 * 1000 / 1000000, # 7 - * 1000 is to convert from m3 to L and /1000000 is to convert from mg to kg
+                Denit_potential_kg_12hr = 
+             (Inun_area_low_m2 * 2.6008 + 
+              Inun_area_med_m2 * 2.6603 +
+              Inun_area_high_m2 * 2.5158)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
+                Final_wetland_NOx_kg = 
+               case_when(Total_input_NOx_kg - Denit_potential_kg_12hr > 0 ~ Total_input_NOx_kg - Denit_potential_kg_12hr,
+                         .default = 0), # 13 - resulting NOx concentration is zero if potential denitrification is greater than input NOx
+                Output_NOx_conc_mgL = (Final_wetland_NOx_kg*1000000) / (Input_vol_total_m3*1000) # 14 
+             )
+
+df5 <- df4 %>% group_by(Scenario) %>% 
+  summarise(Output_NOx_kg = sum(Final_wetland_NOx_kg),
+            Total_output_vol_YC_m3 = sum(Output_vol_YC_m3),
+            Total_input_vol_m3 = sum(Input_vol_total_m3),
+            Channel_vol_no_denit_m3 = mean(Channel_vol_no_denit_m3), # all the same
+            Channel_vol_w_denit_m3 = mean(Channel_vol_w_denit_m3), # all the same
+            Input_conc_NOx_mgL = mean(Input_conc_NOx_mgL), # all the same
+  ) %>% 
+  mutate(Total_output_NOx_conc_mgL = (Output_NOx_kg*1000000) / (Total_input_vol_m3*1000)) # calculate overall output concentration over all FPs
+
+# add a line for scenario 0 - no floodplains, but still has potential in-channel denitrification
+
+df5 <- df5 %>% add_row(Scenario = "Scenario 0",
+                       Output_NOx_kg = 0,
+                       Total_output_vol_YC_m3 = 0,
+                       Total_input_vol_m3 = 0,
+                       Channel_vol_no_denit_m3 = 55290,
+                       Channel_vol_w_denit_m3 = 22300,
+                       Input_conc_NOx_mgL = 0.1,
+                       Total_output_NOx_conc_mgL = 0)
+
+df5 <- df5 %>% mutate(Final_channel_NOx_conc_mgL = 
+               (Channel_vol_no_denit_m3*1000 * Input_conc_NOx_mgL +
+               Channel_vol_w_denit_m3*1000 * 0 +
+               Total_output_vol_YC_m3*1000 * Total_output_NOx_conc_mgL) / ((Channel_vol_no_denit_m3 + Channel_vol_w_denit_m3 + Total_output_vol_YC_m3)*1000))
+```
+
+Also do with the input of 0.05305, which we used for the other parts of this paper. From the other script, we calculated the high/medium/low denitrifications with this input nitrate concentration as:
+
+High elevation: *denitrification, mg/m2/h = 2.1119*
+
+Medium elevation: *denitrification, mg/m2/h = 2.1677*
+
+Low elevation: *denitrification, mg/m2/h = 2.1451*
+
+```{r water_quality_input_0.05305}
+df6 <- df2 %>% 
+  mutate(Input_conc_NOx_mgL = 0.05305)
+
+# mutate columns based on other column values and some generic values for high/med/low denitrification rates
+df6 <- df6 %>% mutate(
+                Input_vol_total_m3 = Input_vol_YC_m3 + Input_vol_other_m3, # 5
+                Total_input_NOx_kg = Input_conc_NOx_mgL * Input_vol_total_m3 * 1000 / 1000000, # 7 - * 1000 is to convert from m3 to L and /1000000 is to convert from mg to kg
+                Denit_potential_kg_12hr = 
+             (Inun_area_low_m2 * 2.1451 + 
+              Inun_area_med_m2 * 2.1677 +
+              Inun_area_high_m2 * 2.1119)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
+                Final_wetland_NOx_kg = 
+               case_when(Total_input_NOx_kg - Denit_potential_kg_12hr > 0 ~ Total_input_NOx_kg - Denit_potential_kg_12hr,
+                         .default = 0), # 13 - resulting NOx concentration is zero if potential denitrification is greater than input NOx
+                Output_NOx_conc_mgL = (Final_wetland_NOx_kg*1000000) / (Input_vol_total_m3*1000) # 14 
+             )
+
+df7 <- df6 %>% group_by(Scenario) %>% 
+  summarise(Output_NOx_kg = sum(Final_wetland_NOx_kg),
+            Total_output_vol_YC_m3 = sum(Output_vol_YC_m3),
+            Total_input_vol_m3 = sum(Input_vol_total_m3),
+            Channel_vol_no_denit_m3 = mean(Channel_vol_no_denit_m3), # all the same
+            Channel_vol_w_denit_m3 = mean(Channel_vol_w_denit_m3), # all the same
+            Input_conc_NOx_mgL = mean(Input_conc_NOx_mgL), # all the same
+  ) %>% 
+  mutate(Total_output_NOx_conc_mgL = (Output_NOx_kg*1000000) / (Total_input_vol_m3*1000)) # calculate overall output concentration over all FPs
+
+# add a line for scenario 0 - no floodplains, but still has potential in-channel denitrification
+
+df7 <- df7 %>% add_row(Scenario = "Scenario 0",
+                       Output_NOx_kg = 0,
+                       Total_output_vol_YC_m3 = 0,
+                       Total_input_vol_m3 = 0,
+                       Channel_vol_no_denit_m3 = 55290,
+                       Channel_vol_w_denit_m3 = 22300,
+                       Input_conc_NOx_mgL = 0.05305,
+                       Total_output_NOx_conc_mgL = 0)
+
+df7 <- df7 %>% mutate(Final_channel_NOx_conc_mgL = 
                (Channel_vol_no_denit_m3*1000 * Input_conc_NOx_mgL +
                Channel_vol_w_denit_m3*1000 * 0 +
                Total_output_vol_YC_m3*1000 * Total_output_NOx_conc_mgL) / ((Channel_vol_no_denit_m3 + Channel_vol_w_denit_m3 + Total_output_vol_YC_m3)*1000))
