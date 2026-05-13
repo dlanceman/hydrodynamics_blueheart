@@ -195,14 +195,11 @@ peaks_function <- function(dataset){
   positives <- dataset %>% dplyr::filter(Flow_m3_15min>0)
   negatives <- dataset %>% dplyr::filter(Flow_m3_15min<0)
 
+  # standardise this. rather than dividing by the number of peaks and troughs, just divide by 53, or the expected number of high/low tides during this period. This means that datasets that sometimes don't have a tidal signal still get their tide_vol_in calculated as the average of tides with a tidal signal and tides without.
   table2 <- tibble(ntides = nrow(peaks),
-                   tide_vol_in = sum(positives$Flow_m3_15min) / nrow(peaks),
-                 tide_vol_out = sum(negatives$Flow_m3_15min) / nrow(troughs),
+                   tide_vol_in = sum(positives$Flow_m3_15min) / 53,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 53,
                  tide_net_exchange = tide_vol_in + tide_vol_out)
-  
-    # also calculate the average duration of each high tide as the amount of time that denitrification can act on the water (the duration of low tides is the amount of time denitrification can act on water sitting on the wetland at low tide, so is also important). Each row in the positives/negatives dataframes represents 15 minutes, so divide the number of rows by 4 to get the number of hours, and then divide this by the number of peaks to get the average duration (in hours) of each high or low tide
-  table2$peaktime <- nrow(positives)/4/nrow(peaks)
-  table2$troughtime <- nrow(negatives)/4/nrow(troughs)
   
   return(table2)
 
@@ -290,17 +287,6 @@ S5_CCCAN_YC_out_per_tide <- S5_CCCAN_YC$tide_vol_out
 Scenario 6
 
 ```{r peaks_scenario_6}
-# scenario 6 - 1c
-#S6_1c_MR <- peaks_function(scen6_1c_MR)
-#S6_1c_YC <- peaks_function(scen6_1c_YC)
-#
-#S6_1c_MR_in_per_tide <- S6_1c_MR$tide_vol_in
-#S6_1c_YC_in_per_tide <- S6_1c_YC$tide_vol_in
-#S6_1c_MR_out_per_tide <- S6_1c_MR$tide_vol_out 
-#S6_1c_YC_out_per_tide <- S6_1c_YC$tide_vol_out
-
-# issue with 1c flowing in only one direction! double checked and can confirm this is what's happening. will fix this in its own chunk below.
-
 # scenario 6 - CCCAN
 S6_CCCAN_CC1 <- peaks_function(scen6_Nnat_TM_cc)
 S6_CCCAN_CC2 <- peaks_function(scen6_Nnat_TR_cc)
@@ -313,9 +299,9 @@ S6_CCCAN_YC_out_per_tide <- S6_CCCAN_YC$tide_vol_out
 
 # scenario 6 - 3A
 S6_3A_east_YC <- peaks_function(scen6_3a_east_yc)
-#S6_3A_south_YC <- peaks_function(scen6_3a_south_yc) # not picking up enough peaks. troubleshoot below
+S6_3A_south_YC <- peaks_function(scen6_3a_south_yc) 
 S6_3A_tl_YC <- peaks_function(scen6_3a_tl_yc)
-#S6_3A_top_YC <- peaks_function(scen6_3a_top_yc) # not working?? and then makes the below all zero. troubleshoot below.
+S6_3A_top_YC <- peaks_function(scen6_3a_top_yc) # not working?? and then makes the below all zero. troubleshoot below.
 
 #S6_3A_YC_in_per_tide <- S6_3A_east_YC$tide_vol_in + S6_3A_south_YC$tide_vol_in + S6_3A_tl_YC$tide_vol_in + S6_3A_top_YC$tide_vol_in
 #S6_3A_YC_out_per_tide <- S6_3A_east_YC$tide_vol_out + S6_3A_south_YC$tide_vol_out + S6_3A_tl_YC$tide_vol_out + S6_3A_top_YC$tide_vol_out
@@ -355,6 +341,22 @@ S7_CCCAN_CC_in_per_tide <- (S7_CCCAN_CC1$tide_vol_in + S7_CCCAN_CC2$tide_vol_in)
 S7_CCCAN_YC_in_per_tide <- S7_CCCAN_YC$tide_vol_in
 S7_CCCAN_CC_out_per_tide <- (S7_CCCAN_CC1$tide_vol_out + S7_CCCAN_CC2$tide_vol_out)
 S7_CCCAN_YC_out_per_tide <- S7_CCCAN_YC$tide_vol_out
+
+# scenario 7 - 1b
+S7_1b_YC1 <- peaks_function(scen7_1b_mid_yc)
+#S7_1b_YC2 <- peaks_function(scen7_1b_top_yc) # doesn't work - troubleshoot below.
+
+#S7_1b_YC_in_per_tide <- S7_1b_YC1$tide_vol_in + S7_1b_YC2$tide_vol_in
+#S7_1b_YC_out_per_tide <- S7_1b_YC1$tide_vol_out + S7_1b_YC2$tide_vol_out
+
+# scenario 7 - 3a
+S7_3a_YC1 <- peaks_function(scen7_3a_east_yc)
+S7_3a_YC2 <- peaks_function(scen7_3a_south_yc) 
+S7_3a_YC3 <- peaks_function(scen7_3a_tl_yc)
+#S7_3a_YC4 <- peaks_function(scen7_3a_top_yc) # doesn't work - troubleshoot below
+
+#S7_3a_YC_in_per_tide <- S7_3a_YC1$tide_vol_in + S7_3a_YC2$tide_vol_in + S7_3a_YC3$tide_vol_in + S7_3a_YC4$tide_vol_in 
+#S7_3a_YC_out_per_tide <- S7_3a_YC1$tide_vol_out + S7_3a_YC2$tide_vol_out + S7_3a_YC3$tide_vol_out + S7_3a_YC4$tide_vol_out 
 ```
 
 Scenario 8
@@ -393,57 +395,8 @@ S8_CCCAN_YC_out_per_tide <- S8_CCCAN_YC$tide_vol_out
 
 Scenario 6 has some issues. Let's investigate these line by line in the next chunk.
 
-```{r scenario_6_modified_peaks}
-# scenario 6 - 1c. Split it up and do separate peaks and troughs calculations for each dataset, since it's only flowing one direction.
-
-# flows only going in from MR
-
-# visualise what a dataset looks like - only peaks, no troughs.
-ggplot(scen6_1c_MR, aes(x = Time, y = Flow_m3_15min)) +
-  geom_line()
-# closer inspection of first 200 points
-ggplot(scen6_1c_MR[1:200,], aes(x = Time, y = Flow_m3_15min)) +
-  geom_line() 
-
-# identify peaks (there are no troughs)
-peaks <- findpeaks(scen6_1c_MR$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20)
-
-# we actually care about volume exchange each tide, not difference in flow rate.
-# can use the number of peaks identified to determine the average input flow. input flow is summing all positive velocities (total volume in over the 28 days) and dividing by the number of peaks (number of high tides)
-positives <- scen3_TL_cc %>% dplyr::filter(Flow_m3_15min>0)
-
-S6_1c_MR <- tibble(ntides = nrow(peaks),
-                 tide_vol_in = sum(positives$Flow_m3_15min) / nrow(peaks))
-
-    # also calculate the average duration of each high tide as the amount of time that denitrification can act on the water (the duration of low tides is the amount of time denitrification can act on water sitting on the wetland at low tide, so is also important). Each row in the positives/negatives dataframes represents 15 minutes, so divide the number of rows by 4 to get the number of hours, and then divide this by the number of peaks to get the average duration (in hours) of each high or low tide
-  S6_1c_MR$peaktime <- nrow(positives)/4/nrow(peaks)
-  
-  
-# flows only going out into YC
-  
-# visualise what a dataset looks like - troughs only
-ggplot(scen6_1c_YC, aes(x = Time, y = Flow_m3_15min)) +
-  geom_line()
-# closer inspection of first 200 points
-ggplot(scen6_1c_YC[1:200,], aes(x = Time, y = Flow_m3_15min)) +
-  geom_line() 
-
-# identify troughs
-troughs <- -findpeaks(-scen6_1c_YC$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
-
-# can use the number of peaks identified to determine the average output flow. 
-negatives <- scen6_1c_YC %>% dplyr::filter(Flow_m3_15min<0)
-
-S6_1c_YC <- tibble(ntides = nrow(peaks),
-                 tide_vol_out = sum(negatives$Flow_m3_15min) / nrow(troughs))
-
-  S6_1c_YC$troughtime <- nrow(negatives)/4/nrow(troughs)  
-  
-S6_1c_MR_in_per_tide <- S6_1c_MR$tide_vol_in
-S6_1c_YC_out_per_tide <- S6_1c_YC$tide_vol_out
-
-
-# also investigate what's going on with scen6_3a_top_yc which isn't working above
+```{r scenario_6_troubleshoot}
+# investigate what's going on with scen6_3a_top_yc which isn't working above
 # visualise what a dataset looks like
 ggplot(scen6_3a_top_yc, aes(x = Time, y = Flow_m3_15min)) +
   geom_line()
@@ -496,6 +449,87 @@ S6_3A_south_YC <- tibble(ntides = nrow(peaks),
   
 S6_3A_YC_in_per_tide <- S6_3A_east_YC$tide_vol_in + S6_3A_south_YC$tide_vol_in + S6_3A_tl_YC$tide_vol_in + S6_3A_top_YC$tide_vol_in
 S6_3A_YC_out_per_tide <- S6_3A_east_YC$tide_vol_out + S6_3A_south_YC$tide_vol_out + S6_3A_tl_YC$tide_vol_out + S6_3A_top_YC$tide_vol_out
+```
+
+Troubleshoot scenario 7 too.
+
+```{r peaks_scen7_troubleshoot}
+# scenario 7 - 1b top
+
+# visualise what a dataset looks like - close to zero flow.
+ggplot(scen7_1b_top_yc, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen7_1b_top_yc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks and troughs. set minpeakheight at 0.05 since there is basically no flow. and meanpeakdistance at 30 (40 for peaks) since there are often a few peaks very close together
+peaks <- findpeaks(scen7_1b_top_yc$Flow_m3_15min, minpeakheight = 0.05, minpeakdistance = 40)
+troughs <- -findpeaks(-scen7_1b_top_yc$Flow_m3_15min, minpeakheight = 0.05, minpeakdistance = 30) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+positives <- scen7_1b_top_yc %>% dplyr::filter(Flow_m3_15min>0)
+negatives <- scen7_1b_top_yc %>% dplyr::filter(Flow_m3_15min<0)
+
+S7_1b_YC2 <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / nrow(peaks),
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / nrow(troughs),
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+
+  S7_1b_YC2$peaktime <- nrow(positives)/4/nrow(peaks)
+  S7_1b_YC2$troughtime <- nrow(negatives)/4/nrow(troughs)
+  
+
+S7_1b_YC_in_per_tide <- S7_1b_YC1$tide_vol_in + S7_1b_YC2$tide_vol_in
+S7_1b_YC_out_per_tide <- S7_1b_YC1$tide_vol_out + S7_1b_YC2$tide_vol_out
+
+
+# scenario 3 - 3a south
+# visualise what a dataset looks like - very few peaks and even fewer troughs
+ggplot(scen7_3a_south_yc, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen7_3a_south_yc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks and troughs.
+peaks <- findpeaks(scen7_3a_south_yc$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20)
+troughs <- -findpeaks(-scen7_3a_south_yc$Flow_m3_15min, minpeakheight = 50, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+positives <- scen7_3a_south_yc %>% dplyr::filter(Flow_m3_15min>0)
+negatives <- scen7_3a_south_yc %>% dplyr::filter(Flow_m3_15min<0)
+
+# for tide vol in and out, divide by 53 or the expected number of high/low tides over this period, rather than the reduced numbers given this dataset often doesn't have any peaks on many tides
+S7_3a_YC2 <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 53,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 53,
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+  
+
+
+# scenario 7 - 3a top
+# visualise what a dataset looks like - very tiny flows & not many peaks
+ggplot(scen7_3a_top_yc, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen7_3a_top_yc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks and troughs. set minpeakheight at 0.01 since there is basically no flow. and meanpeakdistance at 40 since there are often a few peaks very close together
+peaks <- findpeaks(scen7_3a_top_yc$Flow_m3_15min, minpeakheight = 0.01, minpeakdistance = 40)
+troughs <- -findpeaks(-scen7_3a_top_yc$Flow_m3_15min, minpeakheight = 0.01, minpeakdistance = 40) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+positives <- scen7_3a_top_yc %>% dplyr::filter(Flow_m3_15min>0)
+negatives <- scen7_3a_top_yc %>% dplyr::filter(Flow_m3_15min<0)
+
+# divide by 53 or the expected number of high/low tides rather than the actual number, since there are many cases where there are no tides
+S7_3a_YC4 <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 53,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 53,
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+
+# 3a overall calculations
+S7_3a_YC_in_per_tide <- S7_3a_YC1$tide_vol_in + S7_3a_YC2$tide_vol_in + S7_3a_YC3$tide_vol_in + S7_3a_YC4$tide_vol_in 
+S7_3a_YC_out_per_tide <- S7_3a_YC1$tide_vol_out + S7_3a_YC2$tide_vol_out + S7_3a_YC3$tide_vol_out + S7_3a_YC4$tide_vol_out 
 ```
 
 Create an output table summarising all information for each scenario.
@@ -657,20 +691,6 @@ df2 <- df2 %>% add_row(
   Channel_vol_no_denit_m3 = 55290, # 16
   Channel_vol_w_denit_m3 = 22300)  # 17
 
-df2 <- df2 %>% add_row(
-  Scenario = "Scenario 6", # 1
-  Floodplain = "1c",  # 2
-  Input_vol_YC_m3 = S6_1c_YC_in_per_tide, # 3 
-  Input_vol_other_m3 = S6_1c_MR_in_per_tide,  # 4
-  Input_conc_NOx_mgL = 0.076, # 6
-  Inun_area_m2 = mean(Inun_S6$NaturalNorth_area_m2), # 8
-  Inun_area_low_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.101, # 9
-  Inun_area_med_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.539, # 10
-  Inun_area_high_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.361, # 11
-  Output_vol_YC_m3 = -S6_CCCAN_YC_out_per_tide, # 15
-  Channel_vol_no_denit_m3 = 55290, # 16
-  Channel_vol_w_denit_m3 = 22300)  # 17
-
 # fill with values specific to scenario 7
 df2 <- df2 %>% add_row(
   Scenario = "Scenario 7", # 1
@@ -703,6 +723,20 @@ df2 <- df2 %>% add_row(
 df2 <- df2 %>% add_row(
   Scenario = "Scenario 7", # 1
   Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S7_1c_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S7_1c_MR_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.076, # 6
+  Inun_area_m2 = mean(Inun_S7$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S7$`1C_area_m2`) * 0.859, # 9
+  Inun_area_med_m2 = mean(Inun_S7$`1C_area_m2`) * 0.089, # 10
+  Inun_area_high_m2 = mean(Inun_S7$`1C_area_m2`) * 0.052, # 11
+  Output_vol_YC_m3 = -S7_1c_YC_out_per_tide, # 15
+  Channel_vol_no_denit_m3 = 55290, # 16
+  Channel_vol_w_denit_m3 = 22300)  # 17
+
+df2 <- df2 %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "1b",  # 2
   Input_vol_YC_m3 = S7_1c_YC_in_per_tide, # 3 
   Input_vol_other_m3 = S7_1c_MR_in_per_tide,  # 4
   Input_conc_NOx_mgL = 0.076, # 6
