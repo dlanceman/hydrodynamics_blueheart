@@ -148,7 +148,8 @@ MaroochyWQ_E1505 <- MaroochyWQ_E1505 %>%
   Month_char = month(Survey_date, label = TRUE, abbr = TRUE)
 ) %>% 
   filter(Scenario != "Transition") # remove transition category
-# note the current dataset doesn't go past early 2024 so doesn't have anything after 3A
+
+MaroochyWQ_E1505 <- MaroochyWQ_E1505 %>% mutate(Scenario = factor(Scenario, ordered = TRUE, levels = c("Pre-Restoration", "3A Restoration Only", "3A, 1A, 1B and 1C Restoration"))) # make restoration an ordered factor
 
 # plot distribution of values in each scenario
 ggplot(MaroochyWQ_E1505, aes(x = Scenario, y = Nox_mgL)) +
@@ -158,14 +159,19 @@ ggplot(MaroochyWQ_E1505, aes(x = Scenario, y = Nox_mgL)) +
 M <- glm(Nox_mgL ~ Month + Scenario, data = MaroochyWQ_E1505)
 plot(M) # not normal
 M2 <- glm(log(Nox_mgL) ~ Month + Scenario, data = MaroochyWQ_E1505)
-plot(M2) # ok
+plot(M2) # not normal
 M3 <- glm(sqrt(Nox_mgL) ~ Month + Scenario, data = MaroochyWQ_E1505)
-plot(M3) # not amazing but better
+plot(M3) # not amazing but a lot better
 
-# compare to a model without Scenario
+summary(M3)
+
+# explicitly test how adding scenario changes the model
 M3a <- glm(sqrt(Nox_mgL) ~ Month, data = MaroochyWQ_E1505)
-
 anova(M3, M3a)
+
+# explicitly test how adding month changes the model
+M3b <- glm(sqrt(Nox_mgL) ~ Scenario, data = MaroochyWQ_E1505)
+anova(M3, M3b)
 
 # month is near significant, summarise stats for NO3 in each month
 NO3_by_month <- MaroochyWQ_E1505 %>% group_by(Month_char) %>% summarise(mean = mean(Nox_mgL), min = min(Nox_mgL), max = max(Nox_mgL), median = median(Nox_mgL))
@@ -198,6 +204,21 @@ MaroochyWQ_E1505_all <- MaroochyWQ %>% dplyr::filter(Location == "E01505") %>%
 
 # summarise each parameter that's relevant to our measurements by month
 Maroochy_by_Month <- MaroochyWQ_E1505_all %>% group_by(Month) %>% 
+  summarise(mean_Total_N_mgL = mean(Total_N_mgL, na.rm = TRUE),
+            mean_Ammonia_mgL = mean(Ammonia_mgL, na.rm = TRUE),
+            mean_Organic_N_mgL = mean(Organic_N_mgL, na.rm = TRUE),
+            mean_Nox_mgL = mean(Nox_mgL, na.rm = TRUE),
+            mean_DO_mgL = mean(DO_mgL, na.rm = TRUE),
+            `mean_DO_%` = mean(`DO_saturation_%`, na.rm = TRUE),
+            mean_pH = mean(pH, na.rm = TRUE),
+            mean_Total_P_mgL = mean(Total_P_mgL, na.rm = TRUE),
+            mean_Salinity_gL = mean(Salinity_gL, na.rm = TRUE),
+            mean_Conductivity_mScm = mean(Conductivity_mScm, na.rm = TRUE),
+            mean_Temp_deg = mean(Temp_degC, na.rm = TRUE),
+            mean_Turbidity_NTU = mean(Turbidity_NTU, na.rm = TRUE))
+
+# calculate averages for oct-dec, or the three months around our water quality collection period
+Maroochy_E01505_Oct_to_Dec <- MaroochyWQ_E1505_all %>% filter(Month %in% c(10:12)) %>% 
   summarise(mean_Total_N_mgL = mean(Total_N_mgL, na.rm = TRUE),
             mean_Ammonia_mgL = mean(Ammonia_mgL, na.rm = TRUE),
             mean_Organic_N_mgL = mean(Organic_N_mgL, na.rm = TRUE),

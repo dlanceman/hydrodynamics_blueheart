@@ -918,10 +918,25 @@ TotalDenitPlot <- ggplot(denitTotalsLong, aes(x = DateTime, y = Denit/1000, colo
         legend.text = element_text(size = 32))
 TotalDenitPlot
 
-png(here("Output/fig/DenitTotal.png"), width = 1800, height = 1200, units = "px")
-TotalDenitPlot
-dev.off()
+#png(here("Output/fig/DenitTotal.png"), width = 1800, height = 1200, units = "px")
+#TotalDenitPlot
+#dev.off()
 
+# also do this for just a few days (around Feb 4) so it's easier to visualise differences! also subset for just a few scenarios so the graph is easier to see
+denitTotals_subset <- denitTotalsLong %>% dplyr::filter(DateTime > "2023-02-03" & DateTime < "2023-02-06") %>% dplyr::filter(Scenario %in% c("Scenario 1", "Scenario 4", "Scenario 6", "Scenario 8", "Scenario 11"))
+
+SubsetDenitPlot <- ggplot(denitTotals_subset, aes(x = DateTime, y = Denit/1000, color = Scenario)) +
+  geom_line(linewidth = 1) +
+  theme_classic() +
+  xlab("Date") +
+  ylab("Denitrification (kg/hr)") +
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 16),
+        legend.title = element_text(size = 20),
+        legend.text = element_text(size = 16))
+SubsetDenitPlot
+
+ggsave(here("Output/fig/DenitSubset.jpg"), SubsetDenitPlot, width= 2400, height = 1600, units = "px")
 ```
 
 Denitrification - compare to inundated areas.
