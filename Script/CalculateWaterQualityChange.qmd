@@ -143,28 +143,32 @@ scen8_3a_south_yc <- read_csv(here("Data/ModelFlow/scenario8/volumes_scen8_3a_bo
 
 ### 2.1 Change in in-channel water quality
 
-We are conservatively assuming that the channel is also undertaking denitrification, in addition to the floodplains. Therefore, we need to calculate how much denitrification occurs within the channel.
+**NOTE WE ARE EXCLUDING THESE CHANNEL CALCULATIONS FOR THE PAPER. INCLUDED HERE FOR REFERENCE/COMPARISON IN THE CASE CHANNEL SOIL ORGANIC CARBON DATA WERE AVAILABLE AND PRESENCE OF AQUATIC VEGETATION WAS KNOWN.**
+
+If we assume that the channel is also undertaking denitrification, in addition to the floodplains, we need to calculate how much denitrification occurs within the channel.
 
 We know the area of the channel is 44600 m2. We know that denitrification acts on 0.5 m depth, so 22300 m3 of the water in the channel is undergoing denitrification. For the denitrification equation, we just need the area though.
 
 We will have to assume that we can take soil OC% as the low elevation value (even though it's a much lower elevation in the channel).
 
-Therefore, the denitrification equation is, with a 0.076 mg/L input and a value of 13 for soil organic carbon in low elevations:
+Therefore, the denitrification equation is, with a 0.076 mg/L input and a value of 9 for soil organic carbon in low elevations:
 
-Log (denitrification, mg/m2/h) = 0.5093 (log (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))
+Log10 (denitrification, mg/m2/h) = 0.6975 (log10 (NO3 (mg/L)) + 1.6030 + (0.0062\*Soil OC%))
 
 Rearrange for denitrification and substitute numbers in:
 
 ```{r channel_denitrification}
-exp(0.5093 * (log(0.076 +3)) + 0.2067 + (0.0133*13))
+10^(0.6975  * log10(0.076) + 1.6030  + (0.0062*9))
 
 # this is denitrification in mg/m2/g. We have an area of 44600 m2 and 12 hours, therefore:
 
-channel_denit_potential_mg <- exp(0.5093 * (log(0.076 +3)) + 0.2067 + (0.0133*13)) * 44600 * 12 # this is the volume that the channel could denitrify
+channel_denit_potential_mg <- 10^(0.6975 * log10(0.076) + 1.6030 + (0.0062*9)) * 44600 * 12 # this is the volume that the channel could denitrify
 channel_base_nit_vol_mg <- 44600 * 0.5 * 1000 * 0.076 # this is the volume of NOx actually contained in the channel (area x depth x multiplier x concentration). have to multiply the volume by 1000 to convert from m3 to L
 
 # calculate final NOx concnetration in the channel base - change in NOx volume over total volume in the base of the channel
 channel_base_nit_final_conc <- (channel_base_nit_vol_mg - channel_denit_potential_mg)/(44600*0.5*1000)
+
+# negative value, therefore with this denitrification rate, the channel could remove all nitrate in the base of the channel
 ```
 
 Also calculate this for theoretical scenarios with input concentrations of 0.05305 and 0.1, respectively.
@@ -585,27 +589,25 @@ Create an output table summarising all information for each scenario.
 
 **Note for denitrification:**
 
-According to Keith et al. 2025 (Fern's latest report), the equation for denitrification in the Blue Heart is:
+The equation for denitrification in the Blue Heart is:
 
-*Log (denitrification, mg/m2/h) = 0.5093 (log (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
-
-I'm going to assume Log here actually means Ln or Log(e).
+*Log10 (denitrification, mg/m2/h) = 0.6975 (log10 (NO3 (mg/L)) + 1.6030 + (0.0062\*Soil OC%))*
 
 This can be rearranged as:
 
-*denitrification, mg/m2/h = e\^(0.5093 (ln (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%)))*
+*denitrification, mg/m2/h = 10\^(0.6975 (log10 (NO3 (mg/L))) + 1.6030 + (0.0062\*Soil OC%))*
 
 Given we are taking the input nitrate value as a constant of **0.076**, this then becomes:
 
-*denitrification, mg/m2/h = e\^(0.5093 (ln (3.076)) + 0.2067 + (0.0133\*Soil OC%)))*
+*denitrification, mg/m2/h = 10\^(0.6975 (log10 (0.076)) + 1.6030 + (0.0062\*Soil OC%))*
 
-By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 10.5, Medium (0.5-0.75m) = 14.7, Low (0-0.5m) = 13.0), we get the following results:
+By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 4.1, Medium (0.5-0.75m) = 11.5, Low (0-0.5m) = 9), we get the following results:
 
-High elevation: *denitrification, mg/m2/h = 2.5058*
+High elevation: *denitrification, mg/m2/h = 7.0435*
 
-Medium elevation: *denitrification, mg/m2/h = 2.6498*
+Medium elevation: *denitrification, mg/m2/h = 7.8283*
 
-Low elevation: *denitrification, mg/m2/h = 2.5905*
+Low elevation: *denitrification, mg/m2/h = 7.5538*
 
 ```{r Output_table_setup}
 # create an empty dataframe. commented out lines are lines we will calculate later based on other lines.
@@ -908,9 +910,9 @@ df2 <- df2 %>% mutate(
                 Input_vol_total_m3 = Input_vol_YC_m3 + Input_vol_other_m3, # 5
                 Total_input_NOx_kg = Input_conc_NOx_mgL * Input_vol_total_m3 * 1000 / 1000000, # 7 - * 1000 is to convert from m3 to L and /1000000 is to convert from mg to kg
                 Denit_potential_kg_12hr = 
-             (Inun_area_low_m2 * 2.5905 + 
-              Inun_area_med_m2 * 2.6498 +
-              Inun_area_high_m2 * 2.5058)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
+             (Inun_area_low_m2 * 7.5538 + 
+              Inun_area_med_m2 * 7.8283 +
+              Inun_area_high_m2 * 7.0435)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
                 Final_wetland_NOx_kg = 
                case_when(Total_input_NOx_kg - Denit_potential_kg_12hr > 0 ~ Total_input_NOx_kg - Denit_potential_kg_12hr,
                          .default = 0), # 13 - resulting NOx concentration is zero if potential denitrification is greater than input NOx
@@ -934,19 +936,21 @@ df3 <- df2 %>% group_by(Scenario) %>%
   mutate(Total_output_NOx_conc_mgL = (Output_NOx_kg*1000000) / (Total_input_vol_m3*1000)) # calculate overall output concentration over all FPs
 
 # add a line for scenario 0 - no floodplains, but still has potential in-channel denitrification
+# commenting this out for now since we're currently excluding in-channel denitrification
 
-df3 <- df3 %>% add_row(Scenario = "Scenario 0",
-                       Output_NOx_kg = 0,
-                       Total_output_vol_YC_m3 = 0,
-                       Total_input_vol_m3 = 0,
-                       Channel_vol_no_denit_m3 = 55290,
-                       Channel_vol_w_denit_m3 = 22300,
-                       Input_conc_NOx_mgL = 0.076,
-                       Total_output_NOx_conc_mgL = 0)
+#df3 <- df3 %>% add_row(Scenario = "Scenario 0",
+#                       Output_NOx_kg = 0,
+#                       Total_output_vol_YC_m3 = 0,
+#                       Total_input_vol_m3 = 0,
+#                       Channel_vol_no_denit_m3 = 55290,
+#                       Channel_vol_w_denit_m3 = 22300,
+#                       Input_conc_NOx_mgL = 0.076,
+#                       Total_output_NOx_conc_mgL = 0)
 
 df3 <- df3 %>% mutate(Final_channel_NOx_conc_mgL = 
                (Channel_vol_no_denit_m3*1000 * Input_conc_NOx_mgL +
-               Channel_vol_w_denit_m3*1000 * channel_base_nit_final_conc +
+               Channel_vol_w_denit_m3*1000 * Input_conc_NOx_mgL + # if assuming no in-channel denitrification, both parts of the channel get the same input NOx concentration. if want to include channel denitrification, replace Input_conc_NOx_mgL here with the below (channel_base_nit_final_conc)
+                 #channel_base_nit_final_conc +
                Total_output_vol_YC_m3*1000 * Total_output_NOx_conc_mgL) / ((Channel_vol_no_denit_m3 + Channel_vol_w_denit_m3 + Total_output_vol_YC_m3)*1000))
 ```
 
