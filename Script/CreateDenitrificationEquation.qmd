@@ -19,6 +19,7 @@ Get packages.
 library(tidyverse)
 library(here)
 library(readxl)
+library(plotly)
 ```
 
 Get data.
@@ -103,6 +104,13 @@ summary(m2)
 # equation is log(Dtot) = 1.6030 + 0.6975 * Log(NO3) + 0.0062 * Soil_OC
 # R squared adjusted = 0.9117
 
+# what happens when we remove SOC% as a variable?
+m2.1 <- lm(Log_Dtot ~ Log_NOx, data = denit_maroochy)
+anova(m2, m2.1) # model with SOC has lower RSS, therefore retain as it better explains variance.
+
+
+
+
 # try with Dw
 # model
 m2.5 <- lm(Log_Dw ~ `OC_%_` + Log_NOx, data = denit_maroochy)
@@ -178,3 +186,31 @@ summary(m4) # not enough power anymore! variables not significant
 ```
 
 Therefore, use m2!
+
+## 3. Plot
+
+Plot the model results - planar relationship between the three variables.
+
+```{r 3D plot}
+# Create a grid of values for the plane
+NOx_seq <- seq(min(denit_maroochy$Log_NOx), max(denit_maroochy$Log_NOx), length.out = 20)
+SOC_seq <- seq(min(denit_maroochy$`OC_%_`), max(denit_maroochy$`OC_%_`), length.out = 20)
+grid <- expand.grid(Log_NOx = NOx_seq, `OC_%_` = SOC_seq)
+
+# Add predictions to the grid and convert to matrix format
+grid$Log_Dtot <- predict(m2, newdata = grid)
+z_matrix <- matrix(grid$Log_Dtot, nrow = 20, ncol = 20)
+
+# Plot the points and the regression plane
+plane_plot <- plot_ly(data = denit_maroochy, x = ~Log_NOx, y = ~`OC_%_`, z = ~Log_Dtot, 
+                      type = "scatter3d", mode = "markers") %>%
+              add_surface(x = ~NOx_seq, y = ~SOC_seq, z = ~z_matrix, 
+                          opacity = 0.5) %>% 
+  layout(xaxis = list(title = "Log NOx"),
+         yaxis = list(title = "SOC (%)"
+    #zaxis = list(title = "Denitrification (mg/m2/hr)"),
+    ))
+plane_plot 
+
+
+```
