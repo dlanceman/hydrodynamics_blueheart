@@ -1,0 +1,180 @@
+---
+title: "Denitrification equation creation"
+author: "Dana Lanceman"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Create denitrification equation
+
+This script is for creating a denitrification equation from paired nitrate, soil organic carbon and denitrification data so we can predict denitrification rates using nitrate and soil organic carbon data, which are more easily measured.
+
+## 1. Set up
+
+Get packages.
+
+```{r packages}
+library(tidyverse)
+library(here)
+library(readxl)
+```
+
+Get data.
+
+```{r data}
+denit <- read_excel(here("Data/Denitrification_NO3_SOC.xlsx"), sheet = "for_R")
+```
+
+## 2. Run multiple regression
+
+Visualise relationships between predictors.
+
+```{r explore}
+ggplot(denit, aes(x = NOx_mgL, y = Dw_mg_m2_hr)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(denit, aes(x = NOx_mgL, y = Dtot)) +
+  geom_point() +
+  geom_smooth(method = "lm") # Dtot looks like a better fit
+
+ggplot(denit, aes(x = `OC_%_`, y = Dw_mg_m2_hr)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(denit, aes(x = `OC_%_`, y = Dtot)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+```
+
+Manipulate. Make log versions of variables.
+
+```{r manipulate}
+denit <- denit %>% mutate(
+  Log_Dtot = log10(Dtot),
+  Log_NOx = log10(NOx_mgL),
+  Log_Dw = log10(Dw_mg_m2_hr)
+)
+
+# visualise with these new variables
+ggplot(denit, aes(x = Log_NOx, y = Log_Dtot, color = Site)) +
+  geom_point() +
+  geom_smooth(method = "lm") # better fit
+
+ggplot(denit, aes(x = `OC_%_`, y = Log_Dtot, color = Site)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+```
+
+Make a model with all the data. These include data from other locations in Queensland from previous studies.
+
+```{r model}
+m <- lm(Log_Dtot ~ `OC_%_` + Log_NOx, data = denit)
+plot(m) # assumptions look fine
+
+summary(m)
+
+# equation is Log(Dtot) = 1.4360 + 0.4241 * Log(NOx) + 0.0098 * Soil_OC
+# R squared adjusted = 0.58
+```
+
+Try with only Maroochy estuary data.
+
+```{r model_maroochy_only}
+denit_maroochy <- denit %>% dplyr::filter(Site %in% c("Yandina", "Blue Heart"))
+
+# visualise
+ggplot(denit_maroochy, aes(x = Log_NOx, y = Log_Dtot)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
+ggplot(denit_maroochy, aes(x = `OC_%_`, y = Log_Dtot)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
+# model
+m2 <- lm(Log_Dtot ~ `OC_%_` + Log_NOx, data = denit_maroochy)
+plot(m2) # assumptions look fine
+
+summary(m2)
+
+# equation is log(Dtot) = 1.6030 + 0.6975 * Log(NO3) + 0.0062 * Soil_OC
+# R squared adjusted = 0.9117
+
+# try with Dw
+# model
+m2.5 <- lm(Log_Dw ~ `OC_%_` + Log_NOx, data = denit_maroochy)
+plot(m2.5) # assumptions look fine
+
+summary(m2.5) # way worse fit - confirms that Dtot is better.
+```
+
+Why is this different to the previously calculated equation?
+
+Try with NO3 + 3 like the original equation to see if we come up with similar results?
+
+Also try Ln instead of Log.
+
+```{r model_other}
+denit_maroochy <- denit_maroochy %>% mutate(
+  Log_NOx_plus3_ = log10(NOx_mgL + 3) 
+)
+
+# visualise
+ggplot(denit_maroochy, aes(x = Log_NOx_plus3_, y = Log_Dtot)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
+# model
+m3 <- lm(Log_Dtot ~ `OC_%_` + Log_NOx_plus3_, data = denit_maroochy)
+plot(m3) # assumptions look fine
+
+summary(m3)
+
+# equation is ...
+# R squared adjusted = 0.84
+
+denit_maroochy <- denit_maroochy %>% mutate(
+  Ln_NOx = log(NOx_mgL),
+  Ln_Dtot = log(Dtot)
+)
+
+# visualise
+ggplot(denit_maroochy, aes(x = Ln_NOx, y = Log_Dtot)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
+# model
+m3.5 <- lm(Log_Dtot ~ `OC_%_` + Ln_NOx, data = denit_maroochy)
+plot(m3.5) # assumptions look fine
+
+summary(m3.5) # it's the same.
+```
+
+Also try with just Blue Heart data.
+
+```{r model_blueheart}
+denit_blueheart <- denit %>% dplyr::filter(Site == "Blue Heart")
+
+# visualise
+ggplot(denit_blueheart, aes(x = Log_NOx, y = Log_Dtot)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
+ggplot(denit_blueheart, aes(x = `OC_%_`, y = Log_Dtot)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
+# model
+m4 <- lm(Log_Dtot ~ `OC_%_` + Log_NOx, data = denit_blueheart)
+plot(m4) # assumptions look fine
+
+summary(m4) # not enough power anymore! variables not significant
+
+# equation is 
+# R squared adjusted = 0.77
+```
+
+Therefore, use m2!
