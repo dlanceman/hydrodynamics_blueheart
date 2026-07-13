@@ -569,27 +569,25 @@ FPElevs <- FPElevs %>% select(-TimeStep) %>% mutate(
 
 ### 5. Denitrification calculations
 
-According to Keith et al. 2025, the equation for denitrification in the Blue Heart is:
+The equation for denitrification in the Blue Heart is:
 
-*Log (denitrification, mg/m2/h) = 0.5093 (log (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
-
-I'm going to assume Log here actually means Ln or Loge.
+*Log10 (denitrification, mg/m2/h) = 0.5093 (log10 (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%)*
 
 This can be rearranged as:
 
-*denitrification, mg/m2/h = e\^(0.5093 (ln (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%)))*
+*denitrification, mg/m2/h = 10\^(0.5093 (log10 (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
 
 Given we are taking the nitrate value as a constant of 0.05305, this then becomes:
 
-*denitrification, mg/m2/h = e\^(0.5093 (ln (3.05305)) + 0.2067 + (0.0133\*Soil OC%)))*
+*denitrification, mg/m2/h = 10\^(0.5093 (log10 (3.05305)) + 0.2067 + (0.0133\*Soil OC%))*
 
-By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 10.5, Medium (0.5-0.75m) = 14.7, Low (0-0.5m) = 13.0), we get the following results:
+By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 4.1, Medium (0.5-0.75m) = 11.5, Low (0-0.5m) = 9), we get the following results:
 
-High elevation: *denitrification, mg/m2/h = 2.1119*
+High elevation: *denitrification, mg/m2/h = 3.2218*
 
-Medium elevation: *denitrification, mg/m2/h = 2.1677*
+Medium elevation: *denitrification, mg/m2/h = 4.0413*
 
-Low elevation: *denitrification, mg/m2/h = 2.1451*
+Low elevation: *denitrification, mg/m2/h = 3.7435*
 
 So, to calculate the amount of denitrification occuring in each floodplain in each timestep, we can use the proportion of the inundated floodplain in each elevation class to multiply the area out by these numbers.
 
@@ -607,15 +605,15 @@ DenitTimestep <- alltime %>% select("Day", "Hour", contains("area")) %>% subset(
                           .default = Hour),
          Day = case_when(Hour == 0 ~ Day + 1,
                          .default = Day),
-    YCWDenit = YCW_area_m2*(as.numeric(FPElevs[1,5]/100))*2.1451/1000 + 
-           YCW_area_m2*(as.numeric(FPElevs[2,5]/100))*2.1677/1000 + 
-           YCW_area_m2*(as.numeric(FPElevs[3,5]/100))*2.1119/1000,
-         NNatDenit = NaturalNorth_area_m2*(as.numeric(FPElevs[1,6]/100))*2.1451/1000 + 
-           NaturalNorth_area_m2*(as.numeric(FPElevs[2,6]/100))*2.1677/1000 + 
-           NaturalNorth_area_m2*(as.numeric(FPElevs[3,6]/100))*2.1119/1000,
-         SNatDenit = NaturalSouth_area_m2*(as.numeric(FPElevs[1,7]/100))*2.1451/1000 + 
-           NaturalSouth_area_m2*(as.numeric(FPElevs[2,7]/100))*2.1677/1000 + 
-           NaturalSouth_area_m2*(as.numeric(FPElevs[3,7]/100))*2.1119/1000,
+    YCWDenit = YCW_area_m2*(as.numeric(FPElevs[1,5]/100))*3.7435/1000 + 
+           YCW_area_m2*(as.numeric(FPElevs[2,5]/100))*4.0413/1000 + 
+           YCW_area_m2*(as.numeric(FPElevs[3,5]/100))*3.2218/1000,
+         NNatDenit = NaturalNorth_area_m2*(as.numeric(FPElevs[1,6]/100))*3.7435/1000 + 
+           NaturalNorth_area_m2*(as.numeric(FPElevs[2,6]/100))*4.0413/1000 + 
+           NaturalNorth_area_m2*(as.numeric(FPElevs[3,6]/100))*3.2218/1000,
+         SNatDenit = NaturalSouth_area_m2*(as.numeric(FPElevs[1,7]/100))*3.7435/1000 + 
+           NaturalSouth_area_m2*(as.numeric(FPElevs[2,7]/100))*4.0413/1000 + 
+           NaturalSouth_area_m2*(as.numeric(FPElevs[3,7]/100))*3.2218/1000,
          TotalDenit = YCWDenit + NNatDenit + SNatDenit,
          DateTime = as.POSIXct(paste0("2023-",floor((Day-31)/100-0.001)+2,"-",Day-31*(floor((Day-31)/100-0.001)+1)," ",floor(Hour),":",(Hour-floor(Hour))*60), "%Y-%m-%d %h:%M"))
 
@@ -957,6 +955,19 @@ DenitInun
 png(here("Output/fig/DenitInun.png"), width = 1200, height = 800, units = "px") 
 DenitInun
 dev.off()
+
+# quantify relationship between inun area per day and denitrification per day
+inun <- inun %>% mutate(
+  inun_denit_corr = Denit_model/28/Inundation_area_model
+)
+
+# summarise
+inun_denit_stats <- inun %>%  
+  na.omit() %>% 
+  summarise(mean_corr = mean(inun_denit_corr),
+            SE_corr = sd(inun_denit_corr)/n())
+
+
 ```
 
 Denitrification - single floodplains.

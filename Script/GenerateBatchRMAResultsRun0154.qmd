@@ -650,27 +650,25 @@ FPElevs <- FPElevs %>% mutate(
 
 ### 5. Denitrification calculations
 
-According to Keith et al. 2025, the equation for denitrification in the Blue Heart is:
+The equation for denitrification in the Blue Heart is:
 
-*Log (denitrification, mg/m2/h) = 0.5093 (log (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
-
-I'm going to assume Log here actually means Ln or Loge.
+*Log10 (denitrification, mg/m2/h) = 0.5093 (log10 (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%)*
 
 This can be rearranged as:
 
-*denitrification, mg/m2/h = e\^(0.5093 (ln (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%)))*
+*denitrification, mg/m2/h = 10\^(0.5093 (log10 (NO3 (mg/L) +3)) + 0.2067 + (0.0133\*Soil OC%))*
 
 Given we are taking the nitrate value as a constant of 0.05305, this then becomes:
 
-*denitrification, mg/m2/h = e\^(0.5093 (ln (3.05305)) + 0.2067 + (0.0133\*Soil OC%)))*
+*denitrification, mg/m2/h = 10\^(0.5093 (log10 (3.05305)) + 0.2067 + (0.0133\*Soil OC%))*
 
-By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 10.5, Medium (0.5-0.75m) = 14.7, Low (0-0.5m) = 13.0), we get the following results:
+By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 4.1, Medium (0.5-0.75m) = 11.5, Low (0-0.5m) = 9), we get the following results:
 
-High elevation: *denitrification, mg/m2/h = 2.1119*
+High elevation: *denitrification, mg/m2/h = 3.2218*
 
-Medium elevation: *denitrification, mg/m2/h = 2.1677*
+Medium elevation: *denitrification, mg/m2/h = 4.0413*
 
-Low elevation: *denitrification, mg/m2/h = 2.1451*
+Low elevation: *denitrification, mg/m2/h = 3.7435*
 
 So, to calculate the amount of denitrification occuring in each floodplain in each timestep, we can use the proportion of the inundated floodplain in each elevation class to multiply the area out by these numbers.
 
@@ -688,51 +686,51 @@ DenitTimestep <- alltime %>% select("Day", "Hour", contains("area")) %>% subset(
                           .default = Hour),
          Day = case_when(Hour == 0 ~ Day + 1,
                          .default = Day),
-         X1DDenit = X1D_area_m2*(as.numeric(FPElevs[1,17]/100))*2.1451/1000 + 
-           X1D_area_m2*(as.numeric(FPElevs[2,17]/100))*2.1677/1000 + 
-           X1D_area_m2*(as.numeric(FPElevs[3,17]/100))*2.1119/1000,
-         X5BDenit = X5B_area_m2*(as.numeric(FPElevs[1,18]/100))*2.1451/1000 + 
-           X5B_area_m2*(as.numeric(FPElevs[2,18]/100))*2.1677/1000 + 
-           X5B_area_m2*(as.numeric(FPElevs[3,18]/100))*2.1119/1000,
-         X5CDenit = X5C_area_m2*(as.numeric(FPElevs[1,19]/100))*2.1451/1000 + 
-           X5C_area_m2*(as.numeric(FPElevs[2,19]/100))*2.1677/1000 + 
-           X5C_area_m2*(as.numeric(FPElevs[3,19]/100))*2.1119/1000,
-         X3ADenit = X3A_area_m2*(as.numeric(FPElevs[1,20]/100))*2.1451/1000 + 
-           X3A_area_m2*(as.numeric(FPElevs[2,20]/100))*2.1677/1000 + 
-           X3A_area_m2*(as.numeric(FPElevs[3,20]/100))*2.1119/1000,
-         X5ADenit = X5A_area_m2*(as.numeric(FPElevs[1,21]/100))*2.1451/1000 + 
-           X5A_area_m2*(as.numeric(FPElevs[2,21]/100))*2.1677/1000 + 
-           X5A_area_m2*(as.numeric(FPElevs[3,21]/100))*2.1119/1000,
-         X1CDenit = X1C_area_m2*(as.numeric(FPElevs[1,22]/100))*2.1451/1000 + 
-           X1C_area_m2*(as.numeric(FPElevs[2,22]/100))*2.1677/1000 + 
-           X1C_area_m2*(as.numeric(FPElevs[3,22]/100))*2.1119/1000,
-         X1ADenit = X1A_area_m2*(as.numeric(FPElevs[1,23]/100))*2.1451/1000 + 
-           X1A_area_m2*(as.numeric(FPElevs[2,23]/100))*2.1677/1000 + 
-           X1A_area_m2*(as.numeric(FPElevs[3,23]/100))*2.1119/1000,
-         X1BDenit = X1B_area_m2*(as.numeric(FPElevs[1,24]/100))*2.1451/1000 + 
-           X1B_area_m2*(as.numeric(FPElevs[2,24]/100))*2.1677/1000 + 
-           X1B_area_m2*(as.numeric(FPElevs[3,24]/100))*2.1119/1000,
-         NatNDenit = Natural_north_area_m2*(as.numeric(FPElevs[1,25]/100))*2.1451/1000 + 
-           Natural_north_area_m2*(as.numeric(FPElevs[2,25]/100))*2.1677/1000 + 
-           Natural_north_area_m2*(as.numeric(FPElevs[3,25]/100))*2.1119/1000,
-         NatSDenit = Natural_south_area_m2*(as.numeric(FPElevs[1,26]/100))*2.1451/1000 + 
-           Natural_south_area_m2*(as.numeric(FPElevs[2,26]/100))*2.1677/1000 + 
-           Natural_south_area_m2*(as.numeric(FPElevs[3,26]/100))*2.1119/1000,
-         Nat_2aSDenit = Nat_2aS_area_m2*(as.numeric(FPElevs[1,27]/100))*2.1451/1000 + 
-           Nat_2aS_area_m2*(as.numeric(FPElevs[2,27]/100))*2.1677/1000 + 
-           Nat_2aS_area_m2*(as.numeric(FPElevs[3,27]/100))*2.1119/1000,
-         Nat_2aNDenit = Nat_2aN_area_m2*(as.numeric(FPElevs[1,28]/100))*2.1451/1000 + 
-           Nat_2aN_area_m2*(as.numeric(FPElevs[2,28]/100))*2.1677/1000 + 
-           Nat_2aN_area_m2*(as.numeric(FPElevs[3,28]/100))*2.1119/1000,
-         X2A1Denit = X2A1_area_m2*(as.numeric(FPElevs[1,29]/100))*2.1451/1000 + 
-           X2A1_area_m2*(as.numeric(FPElevs[2,29]/100))*2.1677/1000 + 
-           X2A1_area_m2*(as.numeric(FPElevs[3,29]/100))*2.1119/1000,
-         X2A2Denit = X2A2_area_m2*(as.numeric(FPElevs[1,30]/100))*2.1451/1000 + 
-           X2A2_area_m2*(as.numeric(FPElevs[2,30]/100))*2.1677/1000 + 
-           X2A2_area_m2*(as.numeric(FPElevs[3,30]/100))*2.1119/1000,
-         X2A3Denit = X2A3_area_m2*(as.numeric(FPElevs[1,31]/100))*2.1451/1000 + 
-           X2A3_area_m2*(as.numeric(FPElevs[2,31]/100))*2.1677/1000 + 
-           X2A3_area_m2*(as.numeric(FPElevs[3,31]/100))*2.1119/1000,
+         X1DDenit = X1D_area_m2*(as.numeric(FPElevs[1,17]/100))*3.7435/1000 + 
+           X1D_area_m2*(as.numeric(FPElevs[2,17]/100))*4.0413/1000 + 
+           X1D_area_m2*(as.numeric(FPElevs[3,17]/100))*3.2218/1000,
+         X5BDenit = X5B_area_m2*(as.numeric(FPElevs[1,18]/100))*3.7435/1000 + 
+           X5B_area_m2*(as.numeric(FPElevs[2,18]/100))*4.0413/1000 + 
+           X5B_area_m2*(as.numeric(FPElevs[3,18]/100))*3.2218/1000,
+         X5CDenit = X5C_area_m2*(as.numeric(FPElevs[1,19]/100))*3.7435/1000 + 
+           X5C_area_m2*(as.numeric(FPElevs[2,19]/100))*4.0413/1000 + 
+           X5C_area_m2*(as.numeric(FPElevs[3,19]/100))*3.2218/1000,
+         X3ADenit = X3A_area_m2*(as.numeric(FPElevs[1,20]/100))*3.7435/1000 + 
+           X3A_area_m2*(as.numeric(FPElevs[2,20]/100))*4.0413/1000 + 
+           X3A_area_m2*(as.numeric(FPElevs[3,20]/100))*3.2218/1000,
+         X5ADenit = X5A_area_m2*(as.numeric(FPElevs[1,21]/100))*3.7435/1000 + 
+           X5A_area_m2*(as.numeric(FPElevs[2,21]/100))*4.0413/1000 + 
+           X5A_area_m2*(as.numeric(FPElevs[3,21]/100))*3.2218/1000,
+         X1CDenit = X1C_area_m2*(as.numeric(FPElevs[1,22]/100))*3.7435/1000 + 
+           X1C_area_m2*(as.numeric(FPElevs[2,22]/100))*4.0413/1000 + 
+           X1C_area_m2*(as.numeric(FPElevs[3,22]/100))*3.2218/1000,
+         X1ADenit = X1A_area_m2*(as.numeric(FPElevs[1,23]/100))*3.7435/1000 + 
+           X1A_area_m2*(as.numeric(FPElevs[2,23]/100))*4.0413/1000 + 
+           X1A_area_m2*(as.numeric(FPElevs[3,23]/100))*3.2218/1000,
+         X1BDenit = X1B_area_m2*(as.numeric(FPElevs[1,24]/100))*3.7435/1000 + 
+           X1B_area_m2*(as.numeric(FPElevs[2,24]/100))*4.0413/1000 + 
+           X1B_area_m2*(as.numeric(FPElevs[3,24]/100))*3.2218/1000,
+         NatNDenit = Natural_north_area_m2*(as.numeric(FPElevs[1,25]/100))*3.7435/1000 + 
+           Natural_north_area_m2*(as.numeric(FPElevs[2,25]/100))*4.0413/1000 + 
+           Natural_north_area_m2*(as.numeric(FPElevs[3,25]/100))*3.2218/1000,
+         NatSDenit = Natural_south_area_m2*(as.numeric(FPElevs[1,26]/100))*3.7435/1000 + 
+           Natural_south_area_m2*(as.numeric(FPElevs[2,26]/100))*4.0413/1000 + 
+           Natural_south_area_m2*(as.numeric(FPElevs[3,26]/100))*3.2218/1000,
+         Nat_2aSDenit = Nat_2aS_area_m2*(as.numeric(FPElevs[1,27]/100))*3.7435/1000 + 
+           Nat_2aS_area_m2*(as.numeric(FPElevs[2,27]/100))*4.0413/1000 + 
+           Nat_2aS_area_m2*(as.numeric(FPElevs[3,27]/100))*3.2218/1000,
+         Nat_2aNDenit = Nat_2aN_area_m2*(as.numeric(FPElevs[1,28]/100))*3.7435/1000 + 
+           Nat_2aN_area_m2*(as.numeric(FPElevs[2,28]/100))*4.0413/1000 + 
+           Nat_2aN_area_m2*(as.numeric(FPElevs[3,28]/100))*3.2218/1000,
+         X2A1Denit = X2A1_area_m2*(as.numeric(FPElevs[1,29]/100))*3.7435/1000 + 
+           X2A1_area_m2*(as.numeric(FPElevs[2,29]/100))*4.0413/1000 + 
+           X2A1_area_m2*(as.numeric(FPElevs[3,29]/100))*3.2218/1000,
+         X2A2Denit = X2A2_area_m2*(as.numeric(FPElevs[1,30]/100))*3.7435/1000 + 
+           X2A2_area_m2*(as.numeric(FPElevs[2,30]/100))*4.0413/1000 + 
+           X2A2_area_m2*(as.numeric(FPElevs[3,30]/100))*3.2218/1000,
+         X2A3Denit = X2A3_area_m2*(as.numeric(FPElevs[1,31]/100))*3.7435/1000 + 
+           X2A3_area_m2*(as.numeric(FPElevs[2,31]/100))*4.0413/1000 + 
+           X2A3_area_m2*(as.numeric(FPElevs[3,31]/100))*3.2218/1000,
          DateTime = as.POSIXct(paste0("2023-",floor((Day-31)/100-0.001)+2,"-",Day-31*(floor((Day-31)/100-0.001)+1)," ",floor(Hour),":",(Hour-floor(Hour))*60), "%Y-%m-%d %h:%M"))
 
 # export this so we can use it in combination with other scenarios

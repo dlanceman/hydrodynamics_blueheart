@@ -44,6 +44,7 @@ library(tidyverse)
 library(here)
 library(readxl)
 library(data.table)
+library(pracma)
 ```
 
 Get data.
@@ -356,6 +357,24 @@ M56_Upstream_1A <- TimeFormatModelData(M56_Upstream_1A)
 M56_Downstream_1A <- TimeFormatModelData(M56_Downstream_1A)
 M56_WestCoolumBoatRamp <- TimeFormatModelData(M56_WestCoolumBoatRamp)
 M56_PicnicPoint <- TimeFormatModelData(M56_PicnicPoint)
+```
+
+Check heights of spring and neap tides at picnic point.
+
+```{r tide_heights}
+plot(PicnicPointJ$WaterLevel ~ PicnicPointJ$Time)
+
+PicnicPointHighTides <- findpeaks(PicnicPointJ$WaterLevel, minpeakheight = 0.2, minpeakdistance = 30)
+
+PicnicPointHighTides <- PicnicPointHighTides[-1,] # remove an error value
+
+hist(PicnicPointHighTides[,1], breaks = 20)
+
+PicnicPointLowTides <- -findpeaks(-PicnicPointJ$WaterLevel, minpeakheight = 0, minpeakdistance = 30)
+
+PicnicPointLowTides <- PicnicPointLowTides[-1,] # remove an error value
+
+hist(PicnicPointLowTides[,1], breaks = 20)
 ```
 
 ## 3. Clip data to equivalent timeframes
