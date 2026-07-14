@@ -563,15 +563,15 @@ This can be rearranged as:
 
 Given we are taking the nitrate value as a constant of 0.05305, this then becomes:
 
-*denitrification, mg/m2/h = 10\^(0.6975 (log10 (0.05305)) + 1.433 + (0.0062\*Soil OC%))*
+*denitrification, mg/m2/h = 10\^(0.6975 (log10 (0.05305)) + 1.6030 + (0.0062\*Soil OC%))*
 
 By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 4.1, Medium (0.5-0.75m) = 11.5, Low (0-0.5m) = 9), we get the following results:
 
-High elevation: *denitrification, mg/m2/h = 3.7059*
+High elevation: *denitrification, mg/m2/h = 5.4814*
 
-Medium elevation: *denitrification, mg/m2/h = 4.1188*
+Medium elevation: *denitrification, mg/m2/h = 6.0921*
 
-Low elevation: *denitrification, mg/m2/h = 3.9744*
+Low elevation: *denitrification, mg/m2/h = 5.8785*
 
 So, to calculate the amount of denitrification occuring in each floodplain in each timestep, we can use the proportion of the inundated floodplain in each elevation class to multiply the area out by these numbers.
 
@@ -589,9 +589,9 @@ DenitTimestep <- alltime %>% select("Day", "Hour", contains("area")) %>% subset(
                           .default = Hour),
          Day = case_when(Hour == 0 ~ Day + 1,
                          .default = Day),
-         X1CDenit = X1C_area_m2*(as.numeric(FPElevs[1,3]/100))*3.9744/1000 + 
-           X1C_area_m2*(as.numeric(FPElevs[2,3]/100))*4.1188/1000 + 
-           X1C_area_m2*(as.numeric(FPElevs[3,3]/100))*3.7059/1000,
+         X1CDenit = X1C_area_m2*(as.numeric(FPElevs[1,3]/100))*5.8785/1000 + 
+           X1C_area_m2*(as.numeric(FPElevs[2,3]/100))*6.0921/1000 + 
+           X1C_area_m2*(as.numeric(FPElevs[3,3]/100))*5.4814/1000,
          DateTime = as.POSIXct(paste0("2023-",floor((Day-31)/100-0.001)+2,"-",Day-31*(floor((Day-31)/100-0.001)+1)," ",floor(Hour),":",(Hour-floor(Hour))*60), "%Y-%m-%d %h:%M"))
 
 # export this so we can use it in combination with other scenarios

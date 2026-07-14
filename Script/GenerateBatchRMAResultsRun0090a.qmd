@@ -576,15 +576,15 @@ This can be rearranged as:
 
 Given we are taking the nitrate value as a constant of 0.05305, this then becomes:
 
-*denitrification, mg/m2/h = 10\^(0.6975 (log10 (0.05305)) + 1.433 + (0.0062\*Soil OC%))*
+*denitrification, mg/m2/h = 10\^(0.6975 (log10 (0.05305)) + 1.6030 + (0.0062\*Soil OC%))*
 
 By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 4.1, Medium (0.5-0.75m) = 11.5, Low (0-0.5m) = 9), we get the following results:
 
-High elevation: *denitrification, mg/m2/h = 3.7059*
+High elevation: *denitrification, mg/m2/h = 5.4814*
 
-Medium elevation: *denitrification, mg/m2/h = 4.1188*
+Medium elevation: *denitrification, mg/m2/h = 6.0921*
 
-Low elevation: *denitrification, mg/m2/h = 3.9744*
+Low elevation: *denitrification, mg/m2/h = 5.8785*
 
 So, to calculate the amount of denitrification occuring in each floodplain in each timestep, we can use the proportion of the inundated floodplain in each elevation class to multiply the area out by these numbers.
 
@@ -602,24 +602,24 @@ DenitTimestep <- alltime %>% select("Day", "Hour", contains("area"), -contains("
                           .default = Hour),
          Day = case_when(Hour == 0 ~ Day + 1,
                          .default = Day),
-         NNatDenit = NaturalNorth_area_m2*(as.numeric(FPElevs[1,8]/100))*3.9744/1000 + 
-           NaturalNorth_area_m2*(as.numeric(FPElevs[2,8]/100))*4.1188/1000 + 
-           NaturalNorth_area_m2*(as.numeric(FPElevs[3,8]/100))*3.7059/1000,
-         SNatDenit = NaturalSouth_area_m2*(as.numeric(FPElevs[1,9]/100))*3.9744/1000 + 
-           NaturalSouth_area_m2*(as.numeric(FPElevs[2,9]/100))*4.1188/1000 + 
-           NaturalSouth_area_m2*(as.numeric(FPElevs[3,9]/100))*3.7059/1000,
-         X1ADenit = X1A_area_m2*(as.numeric(FPElevs[1,11]/100))*3.9744/1000 + 
-           X1A_area_m2*(as.numeric(FPElevs[2,11]/100))*4.1188/1000 + 
-           X1A_area_m2*(as.numeric(FPElevs[3,11]/100))*3.7059/1000,
-         X1BDenit = X1B_area_m2*(as.numeric(FPElevs[1,10]/100))*3.9744/1000 + 
-           X1B_area_m2*(as.numeric(FPElevs[2,10]/100))*4.1188/1000 + 
-           X1B_area_m2*(as.numeric(FPElevs[3,10]/100))*3.7059/1000,
-         X1CDenit = X1C_area_m2*(as.numeric(FPElevs[1,12]/100))*3.9744/1000 + 
-           X1C_area_m2*(as.numeric(FPElevs[2,12]/100))*4.1188/1000 + 
-           X1C_area_m2*(as.numeric(FPElevs[3,12]/100))*3.7059/1000,
-         YCWDenit = YCW_area_m2*(as.numeric(FPElevs[1,13]/100))*3.9744/1000 + 
-           YCW_area_m2*(as.numeric(FPElevs[2,13]/100))*4.1188/1000 + 
-           YCW_area_m2*(as.numeric(FPElevs[3,13]/100))*3.7059/1000,
+         NNatDenit = NaturalNorth_area_m2*(as.numeric(FPElevs[1,8]/100))*5.8785/1000 + 
+           NaturalNorth_area_m2*(as.numeric(FPElevs[2,8]/100))*6.0921/1000 + 
+           NaturalNorth_area_m2*(as.numeric(FPElevs[3,8]/100))*5.4814/1000,
+         SNatDenit = NaturalSouth_area_m2*(as.numeric(FPElevs[1,9]/100))*5.8785/1000 + 
+           NaturalSouth_area_m2*(as.numeric(FPElevs[2,9]/100))*6.0921/1000 + 
+           NaturalSouth_area_m2*(as.numeric(FPElevs[3,9]/100))*5.4814/1000,
+         X1ADenit = X1A_area_m2*(as.numeric(FPElevs[1,11]/100))*5.8785/1000 + 
+           X1A_area_m2*(as.numeric(FPElevs[2,11]/100))*6.0921/1000 + 
+           X1A_area_m2*(as.numeric(FPElevs[3,11]/100))*5.4814/1000,
+         X1BDenit = X1B_area_m2*(as.numeric(FPElevs[1,10]/100))*5.8785/1000 + 
+           X1B_area_m2*(as.numeric(FPElevs[2,10]/100))*6.0921/1000 + 
+           X1B_area_m2*(as.numeric(FPElevs[3,10]/100))*5.4814/1000,
+         X1CDenit = X1C_area_m2*(as.numeric(FPElevs[1,12]/100))*5.8785/1000 + 
+           X1C_area_m2*(as.numeric(FPElevs[2,12]/100))*6.0921/1000 + 
+           X1C_area_m2*(as.numeric(FPElevs[3,12]/100))*5.4814/1000,
+         YCWDenit = YCW_area_m2*(as.numeric(FPElevs[1,13]/100))*5.8785/1000 + 
+           YCW_area_m2*(as.numeric(FPElevs[2,13]/100))*6.0921/1000 + 
+           YCW_area_m2*(as.numeric(FPElevs[3,13]/100))*5.4814/1000,
          TotalDenit = NNatDenit + SNatDenit + X1ADenit + X1BDenit + X1CDenit + YCWDenit,
          DateTime = as.POSIXct(paste0("2023-",floor((Day-31)/100-0.001)+2,"-",Day-31*(floor((Day-31)/100-0.001)+1)," ",floor(Hour),":",(Hour-floor(Hour))*60), "%Y-%m-%d %h:%M"))
 
