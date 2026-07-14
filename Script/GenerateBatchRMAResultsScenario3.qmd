@@ -11,6 +11,8 @@ editor_options:
 
 This document is for creating a batch of files to input into RMAPLT to create rasters of depth for each timepoint, and then running each file in RMAPLT to generate rasters, reading back in rasters, converting them to binary (wet/dry) rasters, and summing these rasters to calculate how long each cell is inundated, and therefore total residence times.
 
+### 1. Set up
+
 Before we start, load packages.
 
 ```{r Packages}
@@ -23,12 +25,14 @@ library(sf)
 Then, load in the text file we're going to edit to create batch files.
 
 ```{r Txt_file}
-txt87 <- readLines("C:/Users/z5204897/Desktop/Dana/R/runs/run0087/run0087_runbatchresults.ctl")
+txt87 <- readLines(here("Data/ctl/run0087_runbatchresults.ctl"))
 
 # these are the lines we'll be modifying
 txt87[4]
 txt87[6]
 ```
+
+### 2. Generate RMAPLT results for each time point
 
 Next, create a loop to create modified versions of this file for every value in the desired timesteps for the relevant scenario (using the itr file, whatever steps correspond to start of day 17 to start of day 45). Store them in a list (seq_list).
 
@@ -58,8 +62,7 @@ Save each item in the list as a file.
 ```{r Save_files}
 # Define a function to save each element
 save_to_file <- function(item, name) {
-  filename <- paste0("C:/Users/z5204897/Desktop/Dana/R/runs/run0", model, "/runbatch/", name, ".ctl")
-  writeLines(item, con = filename)
+  filename <- paste0("C:/Users/z5204897/Documents/RMAOffline/runs/run0", model, "/runbatch/", name, ".ctl") # replace with your path to the RMAOffline folder.
 }
 
 # Apply the function across the list using mapply (which handles multiple arguments, 'item' and 'name')
@@ -69,17 +72,20 @@ mapply(save_to_file, seq_list, names(seq_list))
 Run each file in the executable RMAPLT to create rasters.
 
 ```{r RunInExecutable}
-setwd("C:/Users/z5204897/Desktop/Dana/R/runs/run0087/runbatch")
+## note that this needs some very specific file storage, otherwise it won't work. Put the files in a folder with a relatively short file path, with no spaces (so not on OneDrive) - if your whole process is there, great, otherwise move the relevant files (including .rma files and mesh folder) there and put the relevant paths below. if you don't immediately get files being created in your folder, the process is not working properly. exit and try again with different file locations. 
+# also I think some or all of these steps require absolute paths, not relative paths with "here" so for least chance of issues, write your absolute file paths.
 
-ctl_files <- list.files(path = "C:/Users/z5204897/Desktop/Dana/R/runs/run0087/runbatch", pattern = "\\.ctl$")
+setwd("C:/Users/z5204897/Documents/RMAoffline/runs/run0087/runbatch")
+
+ctl_files <- list.files(path = "C:/Users/z5204897/Documents/RMAoffline/runs/run0087/runbatch", pattern = "\\.ctl$")
 
 # Define the path to your executable
-executable_path <- "C:/Users/z5204897/Desktop/Dana/R/RMAPLTV97C-july25.exe"
+executable_path <- "C:/Users/z5204897/Documents/RMAoffline/RMAPLTV97C-july25.exe"
 
 for (i in seq_along(ctl_files)) {
     print(paste("Processing file:", ctl_files[[i]]))
 
-    input_path <- paste0("C:/Users/z5204897/Desktop/Dana/R/runs/run0",model, "/runbatch/", ctl_files[[i]]) 
+    input_path <- paste0("C:/Users/z5204897/Documents/RMAoffline/runs/run0",model, "/runbatch/", ctl_files[[i]]) 
     
     # Execute the command
     # stdout=TRUE captures the standard output, which can be useful for debugging
@@ -90,6 +96,8 @@ for (i in seq_along(ctl_files)) {
 }
 
 ```
+
+### 3. Summarise by Month and Day
 
 After all asciis have been created, we want to create some summary stats from these:
 
@@ -106,36 +114,23 @@ After all asciis have been created, we want to create some summary stats from th
 First, convert rasters to binary rasters.
 
 ```{r BinaryRasters}
-# reclassification thresholds - anything ~0 becomes 0 (not wet), >0 becomes 1 (wet)
-#thresholds <- matrix(
-#  c(0, 0.00001, 0,
-#    0.00001, 10, 1),
-#  ncol = 3, byrow = TRUE)
-
+# reclassification thresholds 
 # try calling 0-2cm "dry" to account for model issues in drying.
 thresholds2 <- matrix(
   c(0, 0.02, 0,
     0.02, 10, 1),
   ncol = 3, byrow = TRUE)
 
-# put files into a list
-ascii_files <- list.files(path = "C:/Users/z5204897/Desktop/Dana/R/runs/run0087/runbatch", pattern = "\\.ASC$", full.names = TRUE)
+# put files into a list - the location is wherever you set as your working directory in the chunk above
+ascii_files <- list.files(path = here(paste0("C:/Users/z5204897/Documents/RMAoffline/runs/run0",model,"/runbatch")), pattern = "\\.ASC$", full.names = TRUE)
 
 # make sure R reads these as rasters not just file names
 raster_list <- lapply(ascii_files, terra::rast)
 
 # make a new empty list for binary rasters
-#binary_rasters <- list()
-
 binary_rasters2 <- list()
 
 # loop creating binary rasters
-#for (i in seq_along(raster_list)) {
-#    print(paste("Processing file:", raster_list[[i]]))
-#
-#    binary_rasters[[i]] <- classify(raster_list[[i]], thresholds, include.lowest = #TRUE)
-#}
-
 for (i in seq_along(raster_list)) {
     print(paste("Processing file:", raster_list[[i]]))
 
@@ -158,7 +153,7 @@ sumMonth <- app(rasterStack, fun = sum, na.rm = TRUE)
 
 # 3. continue from here either way
 # load shapefile for cropping
-blueheartareas <- st_read(here("shp/Blue_Heart_Sites_Hydrodynamics.shp"))
+blueheartareas <- st_read(here("Data/shp/Blue_Heart_Sites_Hydrodynamics.shp"))
 crs(blueheartareas)
 
 relevant_nos <- c(12) # substitute whichever areas are relevant to the present scenario
@@ -177,7 +172,7 @@ Also sum by day. For this, we'll need to load in data to understand which time s
 
 ```{r SumByDay}
 # this is the raw itr results file, trimmed to the timesteps we're using here.
-itr <- read.csv(here(paste0("runs/run0",model,"/BH023_0087_1539-4227.csv")))
+itr <- read.csv(here("Data/itr_csvs/BH023_0087_1539-4227.csv"))
 
 #There are many lines per time step and spaces of rows and we want to delete all these.
 
@@ -210,8 +205,8 @@ DayObjects <- mget(DayNames)
 
 
 
-# 1. Option if you want to save absolute values of number of inundation time points. (less recommended)
-# stack these rasters, sum per day and write them as tiffs.
+# 1. Option if you want to save absolute values of number of inundation time points.
+# stack these rasters, sum per day and write them as tiffs. (ideally wouldn't have to save yet, because they're very large and we don't need individual options, see option 2, but option 2 in the chunk below is currently not working, so this is the work around)
 
 for (i in 1:28) {
     print(paste("Processing day:", i+16))
@@ -223,16 +218,16 @@ for (i in 1:28) {
     writeRaster(sumDay, here(paste0("Output/raster/run0", model, "/sumDay", i+16, ".tif")), overwrite = TRUE)
 }
 
-# 2. Option if you don't want to save absolute values and keep them as objects in R for now, just generate tiffs at the next stage (inundation %) (recommended)
-sumDay <- list()
+# 2. Option if you don't want to save absolute values and keep them as objects in R for now, just generate tiffs at the next stage (inundation %) (recommended if you can get the below working)
+#sumDay <- list()
 
-for (i in 1:28) {
-    print(paste("Processing day:", i+16))
+#for (i in 1:28) {
+#    print(paste("Processing day:", i+16))
 
-    rasterStack <- rast(unlist(DayObjects[i]))
+#    rasterStack <- rast(unlist(DayObjects[i]))
     
-    sumDay[[i]] <- app(rasterStack, fun = sum, na.rm = TRUE)
-}
+#    sumDay[[i]] <- app(rasterStack, fun = sum, na.rm = TRUE)
+#}
 
 ```
 
@@ -252,7 +247,8 @@ raster_abs <- lapply(absolute_files, terra::rast)
 names(raster_abs) <- raster_names
 
 
-## 2. ALTERNATIVE IF YOU HAVEN'T SAVED FILES ABOVE (recommended)
+## 2. ALTERNATIVE IF YOU HAVEN'T SAVED FILES ABOVE (recommended if you can get it working)
+## Currently can't run because I need a way to name raster_abs (only named above)
 #raster_abs <- append(sumDay, list(sumMonth)) # just add the month raster to the list of Days
 
 # 3. proceed as normal here either scenario
@@ -270,12 +266,14 @@ for (i in seq_along(raster_abs)) {
 
 ```
 
+### 4. Summarise by area (csv)
+
 Also, create a summary csv that lists the area inundated in each floodplain wetland or in channels at each time point.
 
 To do this, we need a shapefile with our areas.
 
 ```{r Summary csv}
-blueheartareas <- st_read(here("shp/Blue_Heart_Sites_Hydrodynamics.shp"))
+blueheartareas <- st_read(here("Data/shp/Blue_Heart_Sites_Hydrodynamics.shp"))
 
 blueheartareas$Name
 ```
@@ -414,7 +412,7 @@ DEM <- rast(here("Data/merged_2014.tif"))
 crs(DEM)
 
 # also load in the shapefile (in case you haven't in a chunk above) with different floodplain areas
-blueheartareas <- st_read(here("shp/Blue_Heart_Sites_Hydrodynamics.shp"))
+blueheartareas <- st_read(here("Data/shp/Blue_Heart_Sites_Hydrodynamics.shp"))
 crs(blueheartareas)
 
 blueheartareas$Name
@@ -622,146 +620,4 @@ TotalDenit <- DenitTimestep %>% filter(Hour %in% c(1:24)) %>%  # only select one
   select(contains("Denit")) %>% 
   colSums()/1000
 TotalDenit
-```
-
-### 6. Convert inundation frequency (hydroperiod) to habitat types
-
-Reclassify the monthly raster based on thresholds calculated from the calibration period scenario (run 0082).
-
-Thresholds we're assuming:
-
--   Mudflat \>65% (4)
-
--   Mangrove 30-65% (3)
-
--   Saltmarsh 20-30% (2)
-
--   Supratidal forest 0-20% (1)
-
-```{r Habitat_raster}
-month_inun <- rast(here("Output/raster/run0087/inundated/inun_run0087sumMonthCrop.tif")) # substitute name for another scenario
-
-thresholdsHab <- matrix(
-  c(0, 0.3, 1,
-    #0.2, 0.3, 2, # removing saltmarsh as not able to model. if add back in, have to change the above upper boundary too and the assigned numbers below
-    0.3, 0.65, 2,
-    0.65, 1, 3),
-  ncol = 3, byrow = TRUE)
-
-monthHab <- classify(month_inun, thresholdsHab, include.lowest = TRUE)
-
-plot(monthHab)
-
-# crop to relevant areas
-crs(monthHab) <- crs(blueheartrelevant)
-monthHabCrop <- crop(monthHab, blueheartrelevant) %>% mask(blueheartrelevant)
-
-plot(monthHabCrop)
-
-# export this as a tiff
-writeRaster(monthHabCrop, here(paste0("Output/raster/run0",model,"/inundated/run0",model,"_MonthHabCrop.tif")))
-```
-
-Determine accuracy based on validation points.
-
-```{r Validation_accuracy}
-# import sampling points as a shapefile
-samplePts <- st_read("C:/Users/z5204897/OneDrive - UNSW/Desktop/PhD/Spatial/Data/shp/Blue_Heart_Sites/Blue_Heart_Habitats_Points3_Inun.shp") %>% 
-  rename("ID" = "rand_point") %>% 
-  subset(Habitat_ty != "Marsh") %>% # remove marsh
-  mutate(Habitat_ty = factor(Habitat_ty, ordered = TRUE, levels = c("Supratidal forest", "Mangrove", "Mudflat")))
-
-# append the random numbers onto this - validation only
-samplePtsVal <- right_join(samplePts, InunPtsVal, by = c("ID","Habitat_ty","Inun1"))
-
-# extract what the model said was each habitat
-ModelHab <- extract(monthHab, samplePts) %>% 
-  rename("ModelHabitat" = "sum") # rename confusingly named column
-
-InunPtsValCheck <- inner_join(InunPtsVal, ModelHab, by = "ID") %>% 
-  mutate(ModelHabName = factor(case_when(ModelHabitat == 1 ~ "Supratidal forest",
-                                  #ModelHabitat == 2 ~ "Marsh",
-                                  ModelHabitat == 2 ~ "Mangrove",
-                                  ModelHabitat == 3 ~ "Mudflat",
-                                  .default = NA),ordered = TRUE, levels = c("Supratidal forest", "Mangrove", "Mudflat")),
-         is_equal = case_when(ModelHabName == Habitat_ty ~ TRUE,
-                              .default = FALSE))
-
-# check accuracy
-Overall_accuracy <- sum(InunPtsValCheck$is_equal)/nrow(InunPtsValCheck)*100
-HabitatAcc <- InunPtsValCheck %>% group_by(Habitat_ty) %>% summarise(sum = sum(is_equal),count = n()) %>% 
-  mutate(acc = sum/count * 100)
-ModelAcc <- InunPtsValCheck %>% group_by(ModelHabitat) %>% summarise(sum = sum(is_equal),count = n()) %>% 
-  mutate(acc = sum/count * 100)
-```
-
-Habitat areas in each floodplain.
-
-```{r Habitat areas}
-# load in shapefile if you haven't already above
-blueheartareas <- st_read(here("shp/Blue_Heart_Sites_Hydrodynamics.shp"))
-
-# split raster into three shapefiles, one for each habitat type
-thresholdsSup <- matrix(
-  c(1, 1, 1,
-    1.1, 3, NA),
-  ncol = 3, byrow = TRUE)
-monthHabSup <- monthHab %>% classify(thresholdsSup, include.lowest = TRUE)
-plot(monthHabSup)
-
-thresholdsMan <- matrix(
-  c(1, 1, NA,
-    2, 2, 1,
-    2.1, 3, NA),
-  ncol = 3, byrow = TRUE)
-monthHabMan <- monthHab %>% classify(thresholdsMan, include.lowest = TRUE)
-plot(monthHabMan)
-
-thresholdsMud <- matrix(
-  c(1, 2.1, NA,
-    3, 3, 1),
-  ncol = 3, byrow = TRUE)
-monthHabMud <- monthHab %>% classify(thresholdsMud, include.lowest = TRUE)
-plot(monthHabMud)
-
-
-# intersect shapefile with floodplain areas with the habitat raster 
-
-zonal_stats_Sup <- extract(monthHabSup, blueheartareas, fun='sum', na.rm=TRUE)
-zonal_stats_Man <- extract(monthHabMan, blueheartareas, fun='sum', na.rm=TRUE) # need to divide by 2 as each cell value was 2
-zonal_stats_Mud <- extract(monthHabMud, blueheartareas, fun='sum', na.rm=TRUE) # need to divide by 3 as each cell value was 3
-
-zonal_stats <- full_join(zonal_stats_Sup, zonal_stats_Man, by = "ID") %>% full_join(zonal_stats_Mud, by = "ID") %>% 
-  rename("Supratidal forest" = "sum.x",
-         "Mangrove" = "sum.y",
-         "Mudflat" = "sum") %>% 
-  mutate(Mudflat_area_ha = Mudflat/3*400/10000, # divide each by their raster cell value then multiply by 400 as each cell is 20*20m2 so represents 400m2 then divide by 10000 so it's in ha
-         Mangrove_area_ha = Mangrove/2*400/10000,
-         Supratidal_area_ha = `Supratidal forest`/1*400/10000) %>% 
-  select(-c("Supratidal forest", "Mangrove", "Mudflat"))
-
-
-# subset for only the areas you care about in each scenario
-relevant_nos <- c(12) # substitute whichever areas are relevant to the present scenario
-zonalrelevant <- zonal_stats[relevant_nos,]
-totals <- colSums(zonalrelevant)
-totals
-```
-
-For BlueCAM calculations, need average elevation for mangroves. So also calculate that here.
-
-Do this after running the above chunk.
-
-Note this is using elevations from the DEM, not from the model, so they aren't necessarily accurate given the DEM performs poorly in vegetated areas, and we changed a lot of these elevations for the model.
-
-```{r Habitat elevation}
-crs(monthHabMan) <- crs(DEM) # make CRS compatible
-monthHabMan <- terra::resample(monthHabMan, DEM) #resample for same resolution
-
-DEMMan <- crop(DEM, monthHabMan)
-DEMMan2 <- mask(DEMMan, monthHabMan)
-plot(DEMMan2)
-
-average_DEM <- global(DEMMan2, fun = "mean", na.rm = TRUE)
-average_DEM
 ```
