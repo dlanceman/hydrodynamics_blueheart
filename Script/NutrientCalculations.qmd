@@ -27,12 +27,6 @@ Get data. Water quality data for the Maroochy River and our channel locations, a
 Also prepare data. Some data are recorded as the wrong type so change to numeric.
 
 ```{r Get_data}
-# old data, keeping here for reference
-#MaroochyWQ <- read_excel(here("Data/WQ_Maroochy_River_HLW_to2024.xlsx"), sheet = "UseMe") %>% 
-#  mutate(Nox_mgL = as.numeric(Nox_mgL),
-#         Pheopigments_ugL = as.numeric(Pheopigments_ugL),
-#         Total_P_mgL = as.numeric(Total_P_mgL))
-
 MaroochyWQ <- read_excel(here("Data/WQ_Maroochy_River_HLW_to2026.xlsx"), sheet = "Estuarine Marine Data", skip = 3) %>% 
   mutate(Ammonia_mgL = as.numeric(case_when(Ammonia_mgL == "< 0.002" ~ 0.002,
                                   .default = as.numeric(Ammonia_mgL))),
@@ -70,13 +64,11 @@ Maroochy_rain_WQ <- inner_join(MaroochyWQ_E1505, Maroochy_Rain, by = c("Year", "
 
 Explore data.
 
-Plot NO3 over time at the Maroochy River.
+Plot NOx over time at the Maroochy River.
 
 See if there is a relationship between NO3 in the Maroochy River and rainfall.
 
 Plot NOx over the tidal cycle at the three locations we surveyed.
-
-(not yet) Plot NOx with distance downstream each channel.
 
 Plot NOx in 2025.
 
