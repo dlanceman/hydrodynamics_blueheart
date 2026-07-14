@@ -81,7 +81,7 @@ summary(m)
 # R squared adjusted = 0.58
 ```
 
-Try with only Maroochy estuary data.
+I think too large geographic locations... Try with only Maroochy estuary data.
 
 ```{r model_maroochy_only}
 denit_maroochy <- denit %>% dplyr::filter(Site %in% c("Yandina", "Blue Heart"))
@@ -119,49 +119,7 @@ plot(m2.5) # assumptions look fine
 summary(m2.5) # way worse fit - confirms that Dtot is better.
 ```
 
-Why is this different to the previously calculated equation?
-
-Try with NO3 + 3 like the original equation to see if we come up with similar results?
-
-Also try Ln instead of Log.
-
-```{r model_other}
-denit_maroochy <- denit_maroochy %>% mutate(
-  Log_NOx_plus3_ = log10(NOx_mgL + 3) 
-)
-
-# visualise
-ggplot(denit_maroochy, aes(x = Log_NOx_plus3_, y = Log_Dtot)) +
-  geom_point() +
-  geom_smooth(method = "lm") 
-
-# model
-m3 <- lm(Log_Dtot ~ `OC_%_` + Log_NOx_plus3_, data = denit_maroochy)
-plot(m3) # assumptions look fine
-
-summary(m3)
-
-# equation is ...
-# R squared adjusted = 0.84
-
-denit_maroochy <- denit_maroochy %>% mutate(
-  Ln_NOx = log(NOx_mgL),
-  Ln_Dtot = log(Dtot)
-)
-
-# visualise
-ggplot(denit_maroochy, aes(x = Ln_NOx, y = Log_Dtot)) +
-  geom_point() +
-  geom_smooth(method = "lm") 
-
-# model
-m3.5 <- lm(Log_Dtot ~ `OC_%_` + Ln_NOx, data = denit_maroochy)
-plot(m3.5) # assumptions look fine
-
-summary(m3.5) # it's the same.
-```
-
-Also try with just Blue Heart data.
+Also try with just the latest Blue Heart data.
 
 ```{r model_blueheart}
 denit_blueheart <- denit %>% dplyr::filter(Site == "Blue Heart")
@@ -185,7 +143,7 @@ summary(m4) # not enough power anymore! variables not significant
 # R squared adjusted = 0.77
 ```
 
-Therefore, use m2!
+Therefore, use m2 (best fit)!
 
 ## 3. Plot
 
