@@ -25,9 +25,11 @@ library(lubridate)
 options(scipen = 999)
 ```
 
-Next, input datasets.
+Next, input datasets. These are output from the GenerateBatchRMAResults scripts.
 
 Inundation data.
+
+S1, S2, etc refer to Scenario 1, Scenario 2, etc.
 
 ```{r load_inundation_data}
 # make a function to keep relevant data - time related and inundation area data
@@ -47,7 +49,7 @@ Inun_S7 <- read_csv(here("Output/csv/run0090a_summary.csv"))[,-1] %>% keepreleva
 Inun_S8 <- read_csv(here("Output/csv/run0092a_summary.csv"))[,-1] %>% keeprelevant()
 ```
 
-Flow velocity data (to calculate the amount of water exchanged in each tide & the proportion coming to Yandina creek compared to other creeks). I'm not inputting any data from the Southern Natural Area because all of its flows go to Coolum Creek and Maroochy River, so it's not relevant for our Yandina Creek calculations.
+Flow velocity data (to calculate the amount of water exchanged in each tide & the proportion coming to Yandina creek compared to other creeks). These data were extracted from RMA results. I'm not inputting any data from the Southern Natural Area because all of its flows go to Coolum Creek and Maroochy River, so it's not relevant for our Yandina Creek calculations.
 
 Data are stored in the "flow" column and are in m3/s, so need to be converted appropriately to calculate total volumes.
 
@@ -175,7 +177,7 @@ Also calculate this for theoretical scenarios with input concentrations of 0.053
 
 ```{r channel_denit_other_inputs}
 # input concentration of 0.05305
-channel_0.05305_denit_potential_mg <- exp(0.5093 * (log(0.05305 +3)) + 0.2067 + (0.0133*13)) * 44600 * 12 # this is the volume that the channel could denitrify
+channel_0.05305_denit_potential_mg <- 10^(0.6975 * (log(0.05305)) + 1.6030 + (0.0062*9)) * 44600 * 12 # this is the volume that the channel could denitrify
 channel_0.05305_base_nit_vol_mg <- 44600 * 0.5 * 1000 * 0.05305 # this is the volume of NOx actually contained in the channel (area x depth x multiplier x concentration). have to multiply the volume by 1000 to convert from m3 to L
 
 # calculate final NOx concnetration in the channel base - change in NOx volume over total volume in the base of the channel
@@ -186,7 +188,7 @@ channel_0.05305_base_nit_final_conc <- 0
 
 
 # input concentration of 0.1
-channel_0.1_denit_potential_mg <- exp(0.5093 * (log(0.1 +3)) + 0.2067 + (0.0133*13)) * 44600 * 12 # this is the volume that the channel could denitrify
+channel_0.1_denit_potential_mg <- 10^(0.6975 * (log(0.1)) + 1.6030 + (0.0062*9)) * 44600 * 12 # this is the volume that the channel could denitrify
 channel_0.1_base_nit_vol_mg <- 44600 * 0.5 * 1000 * 0.1 # this is the volume of NOx actually contained in the channel (area x depth x multiplier x concentration). have to multiply the volume by 1000 to convert from m3 to L
 
 # calculate final NOx concnetration in the channel base - change in NOx volume over total volume in the base of the channel
