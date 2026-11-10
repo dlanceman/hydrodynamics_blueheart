@@ -67,6 +67,15 @@ ggplot(denit, aes(x = Log_NOx, y = Log_Dtot, color = Site)) +
 ggplot(denit, aes(x = `OC_%_`, y = Log_Dtot, color = Site)) +
   geom_point() +
   geom_smooth(method = "lm") 
+
+# Dw
+ggplot(denit, aes(x = Log_NOx, y = Log_Dw, color = Site)) +
+  geom_point() +
+  geom_smooth(method = "lm") # better fit
+
+ggplot(denit, aes(x = `OC_%_`, y = Log_Dw, color = Site)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
 ```
 
 Make a model with all the data. These include data from other locations in Queensland from previous studies.
@@ -95,6 +104,15 @@ ggplot(denit_maroochy, aes(x = `OC_%_`, y = Log_Dtot)) +
   geom_point() +
   geom_smooth(method = "lm") 
 
+# visualise Dw
+ggplot(denit_maroochy, aes(x = Log_NOx, y = Log_Dw)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
+ggplot(denit_maroochy, aes(x = `OC_%_`, y = Log_Dw)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
 # model
 m2 <- lm(Log_Dtot ~ `OC_%_` + Log_NOx, data = denit_maroochy)
 plot(m2) # assumptions look fine
@@ -117,6 +135,9 @@ m2.5 <- lm(Log_Dw ~ `OC_%_` + Log_NOx, data = denit_maroochy)
 plot(m2.5) # assumptions look fine
 
 summary(m2.5) # way worse fit - confirms that Dtot is better.
+
+# equation is 0.9286 + 0.7048 * Log(NO3) + 0.0008 * Soil_OC
+# R squared adjusted = 0.5124
 ```
 
 Also try with just the latest Blue Heart data.
@@ -133,6 +154,15 @@ ggplot(denit_blueheart, aes(x = `OC_%_`, y = Log_Dtot)) +
   geom_point() +
   geom_smooth(method = "lm") 
 
+# visualise
+ggplot(denit_blueheart, aes(x = Log_NOx, y = Log_Dw)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
+ggplot(denit_blueheart, aes(x = `OC_%_`, y = Log_Dw)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+
 # model
 m4 <- lm(Log_Dtot ~ `OC_%_` + Log_NOx, data = denit_blueheart)
 plot(m4) # assumptions look fine
@@ -141,6 +171,12 @@ summary(m4) # not enough power anymore! variables not significant
 
 # equation is 
 # R squared adjusted = 0.77
+
+# model Dw
+m4.5 <- lm(Log_Dw ~ `OC_%_` + Log_NOx, data = denit_blueheart)
+plot(m4.5) # assumptions look fine
+
+summary(m4.5)  # not enough power anymore! variables not significant
 ```
 
 Therefore, use m2 (best fit)!
@@ -171,4 +207,28 @@ plane_plot <- plot_ly(data = denit_maroochy, x = ~Log_NOx, y = ~`OC_%_`, z = ~Lo
 plane_plot 
 
 
+```
+
+Also plot Dw in 3D.
+
+```{r 3D_plot_Dw}
+# Create a grid of values for the plane
+NOx_seq <- seq(min(denit_maroochy$Log_NOx), max(denit_maroochy$Log_NOx), length.out = 20)
+SOC_seq <- seq(min(denit_maroochy$`OC_%_`), max(denit_maroochy$`OC_%_`), length.out = 20)
+grid <- expand.grid(Log_NOx = NOx_seq, `OC_%_` = SOC_seq)
+
+# Add predictions to the grid and convert to matrix format
+grid$Log_Dw <- predict(m2.5, newdata = grid)
+z_matrix <- matrix(grid$Log_Dw, nrow = 20, ncol = 20)
+
+# Plot the points and the regression plane
+plane_plot_dw <- plot_ly(data = denit_maroochy, x = ~Log_NOx, y = ~`OC_%_`, z = ~Log_Dw, 
+                      type = "scatter3d", mode = "markers") %>%
+              add_surface(x = ~NOx_seq, y = ~SOC_seq, z = ~z_matrix, 
+                          opacity = 0.5) %>% 
+  layout(xaxis = list(title = "Log NOx"),
+         yaxis = list(title = "SOC (%)"
+    #zaxis = list(title = "Denitrification (mg/m2/hr)"),
+    ))
+plane_plot_dw 
 ```
