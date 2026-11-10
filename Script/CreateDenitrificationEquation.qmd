@@ -138,6 +138,10 @@ summary(m2.5) # way worse fit - confirms that Dtot is better.
 
 # equation is 0.9286 + 0.7048 * Log(NO3) + 0.0008 * Soil_OC
 # R squared adjusted = 0.5124
+
+# what happens when we remove SOC% as a variable?
+m2.51 <- lm(Log_Dw ~ Log_NOx, data = denit_maroochy)
+anova(m2.5, m2.51) # model with SOC has lower RSS (just), therefore retain as it better explains variance.
 ```
 
 Also try with just the latest Blue Heart data.
