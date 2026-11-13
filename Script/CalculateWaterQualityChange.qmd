@@ -587,11 +587,13 @@ S8_3a_YC_in_per_tide <- (S8_3a_YC1$tide_vol_in + S8_3a_YC2$tide_vol_in + S8_3a_Y
 S8_3a_YC_out_per_tide <- (S8_3a_YC1$tide_vol_out + S8_3a_YC2$tide_vol_out + S8_3a_YC3$tide_vol_out + S8_3a_YC4$tide_vol_out)
 ```
 
+#### 2.2.1 Summary calculations for Dtot
+
 Create an output table summarising all information for each scenario.
 
 **Note for denitrification:**
 
-The equation for denitrification in the Blue Heart is:
+The equation for TOTAL denitrification (Dtot) in the Blue Heart is:
 
 *Log10 (denitrification, mg/m2/h) = 0.6975 (log10 (NO3 (mg/L)) + 1.6030 + (0.0062\*Soil OC%))*
 
@@ -908,7 +910,7 @@ Note, need to do the final channel concentration separately, so we can account f
 ```{r Table_mutation}
 
 # mutate columns based on other column values and some generic values for high/med/low denitrification rates
-df2 <- df2 %>% mutate(
+dft2 <- df2 %>% mutate(
                 Input_vol_total_m3 = Input_vol_YC_m3 + Input_vol_other_m3, # 5
                 Total_input_NOx_kg = Input_conc_NOx_mgL * Input_vol_total_m3 * 1000 / 1000000, # 7 - * 1000 is to convert from m3 to L and /1000000 is to convert from mg to kg
                 Denit_potential_kg_12hr = 
@@ -922,12 +924,58 @@ df2 <- df2 %>% mutate(
              )
 ```
 
+#### 2.2.2 Also do this for Dw (natural denitrification)
+
+Dw excludes denitrification resulting from nitrification-denitrification processes, so represents the amount of NO3 removed from the water column directly.
+
+The equation for NATURAL denitrification (Dw) in the Blue Heart is:
+
+*Log10 (denitrification, mg/m2/h) = 0.7048 (log10 (NO3 (mg/L)) + 0.9286 + (0.0008\*Soil OC%))*
+
+This can be rearranged as:
+
+*denitrification, mg/m2/h = 10\^(0.7048 (log10 (NO3 (mg/L))) + 0.9286 + (0.0008\*Soil OC%))*
+
+Given we are taking the input nitrate value as a constant of **0.076**, this then becomes:
+
+*denitrification, mg/m2/h = 10\^(0.7048 (log10 (0.076)) + 0.9286 + (0.0008\*Soil OC%))*
+
+By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 4.1, Medium (0.5-0.75m) = 11.5, Low (0-0.5m) = 9), we get the following results:
+
+High elevation: *denitrification, mg/m2/h = 1.3902*
+
+Medium elevation: *denitrification, mg/m2/h = 1.4093*
+
+Low elevation: *denitrification, mg/m2/h = 1.4028*
+
+We can go straight to the table mutation stage, as the earlier steps filling the rows of the table are independent of the denitrification equation.
+
+Note, need to do the final channel concentration separately, so we can account for inputs from multiple wetlands.
+
+```{r table_mutation}
+# mutate columns based on other column values and some generic values for high/med/low denitrification rates
+dfw2 <- df2 %>% mutate(
+                Input_vol_total_m3 = Input_vol_YC_m3 + Input_vol_other_m3, # 5
+                Total_input_NOx_kg = Input_conc_NOx_mgL * Input_vol_total_m3 * 1000 / 1000000, # 7 - * 1000 is to convert from m3 to L and /1000000 is to convert from mg to kg
+                Denit_potential_kg_12hr = 
+             (Inun_area_low_m2 * 1.4028 + 
+              Inun_area_med_m2 * 1.4093 +
+              Inun_area_high_m2 * 1.3902)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
+                Final_wetland_NOx_kg = 
+               case_when(Total_input_NOx_kg - Denit_potential_kg_12hr > 0 ~ Total_input_NOx_kg - Denit_potential_kg_12hr,
+                         .default = 0), # 13 - resulting NOx concentration is zero if potential denitrification is greater than input NOx
+                Output_NOx_conc_mgL = (Final_wetland_NOx_kg*1000000) / (Input_vol_total_m3*1000) # 14 
+             )
+```
+
 ### 2.3 Resulting overall change in channel water quality
 
 Finally, combine all wetlands in each scenario to calculate the overall channel concentration.
 
+#### 2.3.1 For Dtot
+
 ```{r final_WQ_calcs}
-df3 <- df2 %>% group_by(Scenario) %>% 
+dft3 <- dft2 %>% group_by(Scenario) %>% 
   summarise(Output_NOx_kg = sum(Final_wetland_NOx_kg),
             Total_output_vol_YC_m3 = sum(Output_vol_YC_m3),
             Total_input_vol_m3 = sum(Input_vol_total_m3),
@@ -940,7 +988,7 @@ df3 <- df2 %>% group_by(Scenario) %>%
 # add a line for scenario 0 - no floodplains, but still has potential in-channel denitrification
 # commenting this out for now since we're currently excluding in-channel denitrification
 
-#df3 <- df3 %>% add_row(Scenario = "Scenario 0",
+#dft3 <- dft3 %>% add_row(Scenario = "Scenario 0",
 #                       Output_NOx_kg = 0,
 #                       Total_output_vol_YC_m3 = 0,
 #                       Total_input_vol_m3 = 0,
@@ -949,7 +997,39 @@ df3 <- df2 %>% group_by(Scenario) %>%
 #                       Input_conc_NOx_mgL = 0.076,
 #                       Total_output_NOx_conc_mgL = 0)
 
-df3 <- df3 %>% mutate(Final_channel_NOx_conc_mgL = 
+dft3 <- dft3 %>% mutate(Final_channel_NOx_conc_mgL = 
+               (Channel_vol_no_denit_m3*1000 * Input_conc_NOx_mgL +
+               Channel_vol_w_denit_m3*1000 * Input_conc_NOx_mgL + # if assuming no in-channel denitrification, both parts of the channel get the same input NOx concentration. if want to include channel denitrification, replace Input_conc_NOx_mgL here with the below (channel_base_nit_final_conc)
+                 #channel_base_nit_final_conc +
+               Total_output_vol_YC_m3*1000 * Total_output_NOx_conc_mgL) / ((Channel_vol_no_denit_m3 + Channel_vol_w_denit_m3 + Total_output_vol_YC_m3)*1000))
+```
+
+#### 2.3.2 For Dw
+
+```{r final_WQ_calcs}
+dfw3 <- dfw2 %>% group_by(Scenario) %>% 
+  summarise(Output_NOx_kg = sum(Final_wetland_NOx_kg),
+            Total_output_vol_YC_m3 = sum(Output_vol_YC_m3),
+            Total_input_vol_m3 = sum(Input_vol_total_m3),
+            Channel_vol_no_denit_m3 = mean(Channel_vol_no_denit_m3), # all the same
+            Channel_vol_w_denit_m3 = mean(Channel_vol_w_denit_m3), # all the same
+            Input_conc_NOx_mgL = mean(Input_conc_NOx_mgL), # all the same
+  ) %>% 
+  mutate(Total_output_NOx_conc_mgL = (Output_NOx_kg*1000000) / (Total_input_vol_m3*1000)) # calculate overall output concentration over all FPs
+
+# add a line for scenario 0 - no floodplains, but still has potential in-channel denitrification
+# commenting this out for now since we're currently excluding in-channel denitrification
+
+#dfw3 <- dfw3 %>% add_row(Scenario = "Scenario 0",
+#                       Output_NOx_kg = 0,
+#                       Total_output_vol_YC_m3 = 0,
+#                       Total_input_vol_m3 = 0,
+#                       Channel_vol_no_denit_m3 = 55290,
+#                       Channel_vol_w_denit_m3 = 22300,
+#                       Input_conc_NOx_mgL = 0.076,
+#                       Total_output_NOx_conc_mgL = 0)
+
+dfw3 <- dfw3 %>% mutate(Final_channel_NOx_conc_mgL = 
                (Channel_vol_no_denit_m3*1000 * Input_conc_NOx_mgL +
                Channel_vol_w_denit_m3*1000 * Input_conc_NOx_mgL + # if assuming no in-channel denitrification, both parts of the channel get the same input NOx concentration. if want to include channel denitrification, replace Input_conc_NOx_mgL here with the below (channel_base_nit_final_conc)
                  #channel_base_nit_final_conc +
@@ -1076,4 +1156,193 @@ df7 <- df7 %>% mutate(Final_channel_NOx_conc_mgL =
                (Channel_vol_no_denit_m3*1000 * Input_conc_NOx_mgL +
                Channel_vol_w_denit_m3*1000 * 0 +
                Total_output_vol_YC_m3*1000 * Total_output_NOx_conc_mgL) / ((Channel_vol_no_denit_m3 + Channel_vol_w_denit_m3 + Total_output_vol_YC_m3)*1000))
+```
+
+### 2.5 Using the water quality volume approach to calculate denitrification values
+
+For the earlier part of this paper, we calculated denitrification resulting from each scenario. This is different than the water quality calculations, as for water quality, we were focussing on Yandina Creek only so had to take into account volumes coming in and out of Yandina Creek, and only focussed on wetlands attached to Yandina Creek. However, denitrification just cares about the total volume coming into wetlands in each scenario. Therefore, we need volumes in and out of all wetlands from all creeks. We will also use the input NOx concentration of 0.053 for this broader section (not 0.076).
+
+First, need to input data for floodplains and scenarios not considered in the water quality section (because they relate to creeks other than Yandina Creek). Note you have to run all the code above to move into this section, as this section relies on functions and data specified there.
+
+```{r more_input_data}
+# inundation data
+Inun_S9 <- read_csv(here("Output/csv/run0139_summary.csv"))[,-1] %>% keeprelevant()
+Inun_S10 <- read_csv(here("Output/csv/run0154_summary.csv"))[,-1] %>% keeprelevant()
+Inun_S11 <- read_csv(here("Output/csv/run0156_summary.csv"))[,-1] %>% keeprelevant()
+
+# volumes going in/out of floodplains
+# note that floodplains not listed (5a, 5b, 5c, 2a3, 2a2) share entrances with other floodplains so are not listed separately as the below volume calculations include these, where relevant. 1D coveres 5A and 5C, 3A covers 5B, CCCPN covers 2A2, and CCCPS covers 2A3.
+
+# Snat for scenarios above
+scen5_Snat <- read_csv(here("Data/ModelFlow/scenario5/volumes_scen5_snat_all_20261111.csv")) %>% keeprelevantflow
+scen6_Snat <- read_csv(here("Data/ModelFlow/scenario6/volumes_scen6_snat_all_20261111.csv")) %>% keeprelevantflow
+scen7_Snat <- read_csv(here("Data/ModelFlow/scenario7/volumes_scen7_snat_all_20261111.csv")) %>% keeprelevantflow
+scen8_Snat <- read_csv(here("Data/ModelFlow/scenario8/volumes_scen8_snat_all_20261111.csv")) %>% keeprelevantflow
+
+# scenario 9 (1a, 1b, 1c/1b, 1d, 3a, Nnat, Snat, Cccpn, Cccps)
+scen9_1c_MR <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_1c_s_mr.csv")) %>% keeprelevantflow
+scen9_1c1b_YC <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_1c1b_yc.csv")) %>% keeprelevantflow
+scen9_Nnat_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_nnat_bottom.csv")) %>% keeprelevantflow
+scen9_Nnat_TM_cc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_nnat_top.csv")) %>% keeprelevantflow
+scen9_Nnat_TR_cc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_nnat_east.csv")) %>% keeprelevantflow
+scen9_Snat <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_snat_all_20261111.csv")) %>% keeprelevantflow
+scen9_TL_cc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_1a_tl.csv")) %>% keeprelevantflow
+scen9_TR_cc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_1a_tr.csv")) %>% keeprelevantflow
+scen9_BL_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_1a_bl.csv")) %>% keeprelevantflow
+scen9_BR_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_1a_br.csv")) %>% keeprelevantflow
+
+scen9_1b_mid_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_1b_mid.csv")) %>% keeprelevantflow
+scen9_1b_top_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_1b_top.csv")) %>% keeprelevantflow
+scen9_1d_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_1d_all.csv")) %>% keeprelevantflow
+scen9_3a_east_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_3a_east.csv")) %>% keeprelevantflow
+scen9_3a_top_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_3a_top.csv")) %>% keeprelevantflow
+scen9_3a_tl_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_3a_tl.csv")) %>% keeprelevantflow
+scen9_3a_south_yc <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_3a_bottom.csv")) %>% keeprelevantflow
+scen9_cccpn_bl <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_cccpn_bl.csv")) %>% keeprelevantflow
+scen9_cccpn_east <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_cccpn_east.csv")) %>% keeprelevantflow
+scen9_cccpn_top <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_cccpn_top.csv")) %>% keeprelevantflow
+scen9_cccpn_tl <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_cccpn_tl.csv")) %>% keeprelevantflow
+scen9_cccps_bl <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_cccps_bl.csv")) %>% keeprelevantflow
+scen9_cccps_bottom <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_cccps_bottom.csv")) %>% keeprelevantflow
+scen9_cccps_tl <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_cccps_tl.csv")) %>% keeprelevantflow
+scen9_cccps_tr <- read_csv(here("Data/ModelFlow/scenario9/volumes_scen9_cccps_tr.csv")) %>% keeprelevantflow
+
+# scenario 10 (1a, 1b, 1c/1b, 1d, 3a, Nnat, Snat, Cccpn, Cccps, 2a1)
+scen10_1c_MR <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_1c_s_mr.csv")) %>% keeprelevantflow
+scen10_1c1b_YC <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_1c1b_yc.csv")) %>% keeprelevantflow
+scen10_Nnat_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_nnat_bottom.csv")) %>% keeprelevantflow
+scen10_Nnat_TM_cc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_nnat_top.csv")) %>% keeprelevantflow
+scen10_Nnat_TR_cc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_nnat_east.csv")) %>% keeprelevantflow
+scen10_Snat <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_snat_all.csv")) %>% keeprelevantflow
+scen10_TL_cc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_1a_tl.csv")) %>% keeprelevantflow
+scen10_TR_cc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_1a_tr.csv")) %>% keeprelevantflow
+scen10_BL_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_1a_bl.csv")) %>% keeprelevantflow
+scen10_BR_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_1a_br.csv")) %>% keeprelevantflow
+
+scen10_1b_mid_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_1b_mid.csv")) %>% keeprelevantflow
+scen10_1b_top_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_1b_top.csv")) %>% keeprelevantflow
+scen10_1d_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_1d_all.csv")) %>% keeprelevantflow
+scen10_3a_east_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_3a_east.csv")) %>% keeprelevantflow
+scen10_3a_top_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_3a_top.csv")) %>% keeprelevantflow
+scen10_3a_tl_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_3a_tl.csv")) %>% keeprelevantflow
+scen10_3a_south_yc <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_3a_bottom.csv")) %>% keeprelevantflow
+scen10_cccpn_bl <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_cccpn_bl.csv")) %>% keeprelevantflow
+scen10_cccpn_east <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_cccpn_east.csv")) %>% keeprelevantflow
+scen10_cccpn_top <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_cccpn_top.csv")) %>% keeprelevantflow
+scen10_cccpn_tl <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_cccpn_tl.csv")) %>% keeprelevantflow
+scen10_cccps_bl <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_cccps_bl.csv")) %>% keeprelevantflow
+scen10_cccps_bottom <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_cccps_bottom.csv")) %>% keeprelevantflow
+scen10_cccps_tl <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_cccps_tl.csv")) %>% keeprelevantflow
+scen10_cccps_tr <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_cccps_east.csv")) %>% keeprelevantflow
+scen10_2a1 <- read_csv(here("Data/ModelFlow/scenario10/volumes_scen10_2a1.csv")) %>% keeprelevantflow
+
+# scenario 11 (1a, 1b, 1c/1b, 1d, 3a, Nnat, Snat, Cccpn, Cccps, 2a1, 3b)
+scen11_1c_MR <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_1c_s_mr.csv")) %>% keeprelevantflow
+scen11_1c1b_YC <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_1c1b_yc.csv")) %>% keeprelevantflow
+scen11_Nnat_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_nnat_bottom.csv")) %>% keeprelevantflow
+scen11_Nnat_TM_cc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_nnat_top.csv")) %>% keeprelevantflow
+scen11_Nnat_TR_cc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_nnat_east.csv")) %>% keeprelevantflow
+scen11_Snat <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_snat_all.csv")) %>% keeprelevantflow
+scen11_TL_cc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_1a_tl.csv")) %>% keeprelevantflow
+scen11_TR_cc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_1a_tr.csv")) %>% keeprelevantflow
+scen11_BL_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_1a_bl.csv")) %>% keeprelevantflow
+scen11_BR_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_1a_br.csv")) %>% keeprelevantflow
+
+scen11_1b_mid_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_1b_mid.csv")) %>% keeprelevantflow
+scen11_1b_top_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_1b_top.csv")) %>% keeprelevantflow
+scen11_1d_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_1d_all.csv")) %>% keeprelevantflow
+scen11_3a_east_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_3a_east.csv")) %>% keeprelevantflow
+scen11_3a_top_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_3a_top.csv")) %>% keeprelevantflow
+scen11_3a_tl_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_3a_tl.csv")) %>% keeprelevantflow
+scen11_3a_south_yc <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_3a_bottom.csv")) %>% keeprelevantflow
+scen11_cccpn_bl <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_cccpn_bl.csv")) %>% keeprelevantflow
+scen11_cccpn_east <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_cccpn_east.csv")) %>% keeprelevantflow
+scen11_cccpn_top <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_cccpn_top.csv")) %>% keeprelevantflow
+scen11_cccpn_tl <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_cccpn_tl.csv")) %>% keeprelevantflow
+scen11_cccps_bl <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_cccps_bl.csv")) %>% keeprelevantflow
+scen11_cccps_bottom <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_cccps_bottom.csv")) %>% keeprelevantflow
+scen11_cccps_tl <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_cccps_tl.csv")) %>% keeprelevantflow
+scen11_cccps_tr <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_cccps_east.csv")) %>% keeprelevantflow
+scen11_2a1 <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_2a1.csv")) %>% keeprelevantflow
+scen11_3b <- read_csv(here("Data/ModelFlow/scenario11/volumes_scen11_ccw.csv")) %>% keeprelevantflow
+```
+
+Next, calculate input and output volumes using the methodology above. This time, we don't need to separate Yandina and Coolum Creek/Maroochy River - can just add all flows together.
+
+First, scenario 9.
+
+```{r Input_output_volumes_Scenario9}
+# scenario 9 - 1a
+S9_1a_CC1 <- peaks_function(scen9_TL_cc)
+S9_1a_CC2 <- peaks_function(scen9_TR_cc)
+S9_1a_YC1 <- peaks_function(scen9_BL_yc)
+S9_1a_YC2 <- peaks_function(scen9_BR_yc)
+
+S9_1a_all_in_per_tide <- (S9_1a_CC1$tide_vol_in + S9_1a_CC2$tide_vol_in + S9_1a_YC1$tide_vol_in + S9_1a_YC2$tide_vol_in)
+S9_1a_all_out_per_tide <- (S9_1a_CC1$tide_vol_out + S9_1a_CC2$tide_vol_out + S9_1a_YC1$tide_vol_out + S9_1a_YC2$tide_vol_out)
+
+# scenario 9 - 1b
+S9_1b_YC1 <- peaks_function(scen9_1b_mid_yc)
+S9_1b_YC2 <- peaks_function(scen9_1b_top_yc) 
+
+S9_1b_YC_in_per_tide <- (S9_1b_YC1$tide_vol_in + S9_1b_YC2$tide_vol_in)
+S9_1b_YC_out_per_tide <- (S9_1b_YC1$tide_vol_out + S9_1b_YC2$tide_vol_out)
+
+# scenario 8- 1c 1b
+S9_1c_MR <- peaks_function(scen9_1c_MR)
+S9_1c1b_YC <- peaks_function(scen9_1c1b_YC)
+
+S9_1c_MR_in_per_tide <- S9_1c_MR$tide_vol_in # keep this separated because this is 1c on its own whereas the other is both.
+S9_1c1b_YC_in_per_tide <- S9_1c1b_YC$tide_vol_in
+S9_1c_MR_out_per_tide <- S9_1c_MR$tide_vol_out 
+S9_1c1b_YC_out_per_tide <- S9_1c1b_YC$tide_vol_out
+
+# scenario 9 - 1d
+S9_1d_YC <- peaks_function(scen9_1d_yc)
+
+S9_1d_YC_in_per_tide <- S9_1d_YC$tide_vol_in
+S9_1d_YC_out_per_tide <- S9_1d_YC$tide_vol_out 
+
+# scenario 9 - 3a
+S9_3a_YC1 <- peaks_function(scen9_3a_east_yc)
+S9_3a_YC2 <- peaks_function(scen9_3a_south_yc)
+S9_3a_YC3 <- peaks_function(scen9_3a_tl_yc)
+#S9_3a_YC4 <- peaks_function(scen9_3a_top_yc) # doesn't work - troubleshoot below
+
+#S9_3a_YC_in_per_tide <- (S9_3a_YC1$tide_vol_in + S9_3a_YC2$tide_vol_in + S9_3a_YC3$tide_vol_in + S9_3a_YC4$tide_vol_in)
+#S9_3a_YC_out_per_tide <- (S9_3a_YC1$tide_vol_out + S9_3a_YC2$tide_vol_out + S9_3a_YC3$tide_vol_out + S9_3a_YC4$tide_vol_out)
+
+# scenario 9 - CCCAN
+S9_CCCAN_CC1 <- peaks_function(scen9_Nnat_TM_cc)
+S9_CCCAN_CC2 <- peaks_function(scen9_Nnat_TR_cc)
+S9_CCCAN_YC <- peaks_function(scen9_Nnat_yc)
+
+S9_CCCAN_all_in_per_tide <- (S9_CCCAN_CC1$tide_vol_in + S9_CCCAN_CC2$tide_vol_in + S9_CCCAN_YC$tide_vol_in)
+S9_CCCAN_all_out_per_tide <- (S9_CCCAN_CC1$tide_vol_out + S9_CCCAN_CC2$tide_vol_out + S9_CCCAN_YC$tide_vol_out)
+
+# scenario 9 - CCCAS
+S9_CCCAS <- peaks_function(scen9_Snat)
+
+S9_CCCAS_all_in_per_tide <- S9_CCCAS$tide_vol_in
+S9_CCCAS_all_out_per_tide <- S9_CCCAS$tide_vol_out
+
+# scenario 9 - cccpn
+S9_CCCPN_1 <- peaks_function(scen9_cccpn_bl) # 21 tides calc
+S9_CCCPN_2 <- peaks_function(scen9_cccpn_east) # 75 tides calc
+S9_CCCPN_3 <- peaks_function(scen9_cccpn_tl) # 26 tides calc
+S9_CCCPN_4 <- peaks_function(scen9_cccpn_top) # 45 tides calc
+
+# tides are not properly calculated, so troubleshoot below before doing these calcs.
+#S9_CCCAN_all_in_per_tide <- (S9_CCCPN_1$tide_vol_in + S9_CCCPN_2$tide_vol_in + S9_CCCPN_3$tide_vol_in + S9_CCCPN_4$tide_vol_in)
+#S9_CCCAN_all_out_per_tide <- (S9_CCCPN_1$tide_vol_out + S9_CCCPN_2$tide_vol_out + S9_CCCPN_3$tide_vol_out + S9_CCCPN_4$tide_vol_out)
+
+# scenario 9 - cccps
+S9_CCCPS_1 <- peaks_function(scen9_cccps_bl) # 71 tides calc
+S9_CCCPS_2 <- peaks_function(scen9_cccps_tr) # 6 tides calc
+S9_CCCPS_3 <- peaks_function(scen9_cccps_tl) # 49 tides calc
+S9_CCCPS_4 <- peaks_function(scen9_cccps_bottom) # 49 tides calc
+
+# tides are not properly calculated, so troubleshoot below before doing these calcs.
+#S9_CCCAS_all_in_per_tide <- (S9_CCCPS_1$tide_vol_in + S9_CCCPS_2$tide_vol_in + S9_CCCPS_3$tide_vol_in + S9_CCCPS_4$tide_vol_in)
+#S9_CCCAS_all_out_per_tide <- (S9_CCCPS_1$tide_vol_out + S9_CCCPS_2$tide_vol_out + S9_CCCPS_3$tide_vol_out + S9_CCCPS_4$tide_vol_out)
 ```
