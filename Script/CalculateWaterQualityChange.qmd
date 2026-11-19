@@ -251,10 +251,10 @@ peaks_function <- function(dataset){
   positives <- dataset %>% dplyr::filter(Flow_m3_15min>0)
   negatives <- dataset %>% dplyr::filter(Flow_m3_15min<0)
 
-  # standardise this. rather than dividing by the number of peaks and troughs, just divide by 53, or the expected number of high/low tides during this period. This means that datasets that sometimes don't have a tidal signal still get their tide_vol_in calculated as the average of tides with a tidal signal and tides without.
+  # standardise this. rather than dividing by the number of peaks and troughs, just divide by 54, or the expected number of high/low tides during this period. This means that datasets that sometimes don't have a tidal signal still get their tide_vol_in calculated as the average of tides with a tidal signal and tides without.
   table2 <- tibble(ntides = nrow(peaks),
-                   tide_vol_in = sum(positives$Flow_m3_15min) / 53,
-                 tide_vol_out = sum(negatives$Flow_m3_15min) / 53,
+                   tide_vol_in = sum(positives$Flow_m3_15min) / 54,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 54,
                  tide_net_exchange = tide_vol_in + tide_vol_out)
   
   return(table2)
@@ -491,8 +491,8 @@ positives <- scen6_3a_top_yc %>% dplyr::filter(Flow_m3_15min>0)
 negatives <- scen6_3a_top_yc %>% dplyr::filter(Flow_m3_15min<0)
 
 S6_3A_top_YC <- tibble(ntides = nrow(peaks),
-                 tide_vol_in = sum(positives$Flow_m3_15min) / 53,
-                 tide_vol_out = sum(negatives$Flow_m3_15min) / 53,
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 54,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 54,
                  tide_net_exchange = tide_vol_in + tide_vol_out)
 
 
@@ -523,8 +523,8 @@ positives <- scen7_1b_top_yc %>% dplyr::filter(Flow_m3_15min>0)
 negatives <- scen7_1b_top_yc %>% dplyr::filter(Flow_m3_15min<0)
 
 S7_1b_YC2 <- tibble(ntides = nrow(peaks),
-                 tide_vol_in = sum(positives$Flow_m3_15min) / 53,
-                 tide_vol_out = sum(negatives$Flow_m3_15min) / 53,
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 54,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 54,
                  tide_net_exchange = tide_vol_in + tide_vol_out)
   
 
@@ -549,8 +549,8 @@ negatives <- scen7_3a_top_yc %>% dplyr::filter(Flow_m3_15min<0)
 
 # divide by 53 or the expected number of high/low tides rather than the actual number, since there are many cases where there are no tides
 S7_3a_YC4 <- tibble(ntides = nrow(peaks),
-                 tide_vol_in = sum(positives$Flow_m3_15min) / 53,
-                 tide_vol_out = sum(negatives$Flow_m3_15min) / 53,
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 54,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 54,
                  tide_net_exchange = tide_vol_in + tide_vol_out)
 
 # 3a overall calculations
@@ -578,8 +578,8 @@ positives <- scen8_3a_top_yc %>% dplyr::filter(Flow_m3_15min>0)
 negatives <- scen8_3a_top_yc %>% dplyr::filter(Flow_m3_15min<0)
 
 S8_3a_YC4 <- tibble(ntides = nrow(peaks),
-                 tide_vol_in = sum(positives$Flow_m3_15min) / 53,
-                 tide_vol_out = sum(negatives$Flow_m3_15min) / 53,
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 54,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 54,
                  tide_net_exchange = tide_vol_in + tide_vol_out)
 
 # 3a calculations
@@ -1162,6 +1162,8 @@ df7 <- df7 %>% mutate(Final_channel_NOx_conc_mgL =
 
 For the earlier part of this paper, we calculated denitrification resulting from each scenario. This is different than the water quality calculations, as for water quality, we were focussing on Yandina Creek only so had to take into account volumes coming in and out of Yandina Creek, and only focussed on wetlands attached to Yandina Creek. However, denitrification just cares about the total volume coming into wetlands in each scenario. Therefore, we need volumes in and out of all wetlands from all creeks. We will also use the input NOx concentration of 0.053 for this broader section (not 0.076).
 
+#### 2.5.1 Input more data and generate associated input and outcome volumes
+
 First, need to input data for floodplains and scenarios not considered in the water quality section (because they relate to creeks other than Yandina Creek). Note you have to run all the code above to move into this section, as this section relies on functions and data specified there.
 
 ```{r more_input_data}
@@ -1288,7 +1290,7 @@ S9_1b_YC2 <- peaks_function(scen9_1b_top_yc)
 S9_1b_YC_in_per_tide <- (S9_1b_YC1$tide_vol_in + S9_1b_YC2$tide_vol_in)
 S9_1b_YC_out_per_tide <- (S9_1b_YC1$tide_vol_out + S9_1b_YC2$tide_vol_out)
 
-# scenario 8- 1c 1b
+# scenario 9 - 1c 1b
 S9_1c_MR <- peaks_function(scen9_1c_MR)
 S9_1c1b_YC <- peaks_function(scen9_1c1b_YC)
 
@@ -1332,9 +1334,9 @@ S9_CCCPN_2 <- peaks_function(scen9_cccpn_east) # 75 tides calc
 S9_CCCPN_3 <- peaks_function(scen9_cccpn_tl) # 26 tides calc
 S9_CCCPN_4 <- peaks_function(scen9_cccpn_top) # 45 tides calc
 
-# tides are not properly calculated, so troubleshoot below before doing these calcs.
-#S9_CCCAN_all_in_per_tide <- (S9_CCCPN_1$tide_vol_in + S9_CCCPN_2$tide_vol_in + S9_CCCPN_3$tide_vol_in + S9_CCCPN_4$tide_vol_in)
-#S9_CCCAN_all_out_per_tide <- (S9_CCCPN_1$tide_vol_out + S9_CCCPN_2$tide_vol_out + S9_CCCPN_3$tide_vol_out + S9_CCCPN_4$tide_vol_out)
+# number of tides is not properly calculated, however this doesn't matter, because we already standardised calculations of "in and out per tide" by dividing by 54, rather than the number of tides.
+S9_CCCPN_all_in_per_tide <- (S9_CCCPN_1$tide_vol_in + S9_CCCPN_2$tide_vol_in + S9_CCCPN_3$tide_vol_in + S9_CCCPN_4$tide_vol_in)
+S9_CCCPN_all_out_per_tide <- (S9_CCCPN_1$tide_vol_out + S9_CCCPN_2$tide_vol_out + S9_CCCPN_3$tide_vol_out + S9_CCCPN_4$tide_vol_out)
 
 # scenario 9 - cccps
 S9_CCCPS_1 <- peaks_function(scen9_cccps_bl) # 71 tides calc
@@ -1342,7 +1344,289 @@ S9_CCCPS_2 <- peaks_function(scen9_cccps_tr) # 6 tides calc
 S9_CCCPS_3 <- peaks_function(scen9_cccps_tl) # 49 tides calc
 S9_CCCPS_4 <- peaks_function(scen9_cccps_bottom) # 49 tides calc
 
-# tides are not properly calculated, so troubleshoot below before doing these calcs.
-#S9_CCCAS_all_in_per_tide <- (S9_CCCPS_1$tide_vol_in + S9_CCCPS_2$tide_vol_in + S9_CCCPS_3$tide_vol_in + S9_CCCPS_4$tide_vol_in)
-#S9_CCCAS_all_out_per_tide <- (S9_CCCPS_1$tide_vol_out + S9_CCCPS_2$tide_vol_out + S9_CCCPS_3$tide_vol_out + S9_CCCPS_4$tide_vol_out)
+# tides are not properly calculated, however this doesn't matter, because we already standardised calculations of "in and out per tide" by dividing by 54, rather than the number of tides.
+S9_CCCPS_all_in_per_tide <- (S9_CCCPS_1$tide_vol_in + S9_CCCPS_2$tide_vol_in + S9_CCCPS_3$tide_vol_in + S9_CCCPS_4$tide_vol_in)
+S9_CCCPS_all_out_per_tide <- (S9_CCCPS_1$tide_vol_out + S9_CCCPS_2$tide_vol_out + S9_CCCPS_3$tide_vol_out + S9_CCCPS_4$tide_vol_out)
 ```
+
+Scenario 10.
+
+```{r InputOutput_volumes_scenario_10}
+# scenario 10 - 1a
+S10_1a_CC1 <- peaks_function(scen10_TL_cc)
+S10_1a_CC2 <- peaks_function(scen10_TR_cc)
+S10_1a_YC1 <- peaks_function(scen10_BL_yc)
+S10_1a_YC2 <- peaks_function(scen10_BR_yc)
+
+S10_1a_all_in_per_tide <- (S10_1a_CC1$tide_vol_in + S10_1a_CC2$tide_vol_in + S10_1a_YC1$tide_vol_in + S10_1a_YC2$tide_vol_in)
+S10_1a_all_out_per_tide <- (S10_1a_CC1$tide_vol_out + S10_1a_CC2$tide_vol_out + S10_1a_YC1$tide_vol_out + S10_1a_YC2$tide_vol_out)
+
+# scenario 10 - 1b
+S10_1b_YC1 <- peaks_function(scen10_1b_mid_yc)
+S10_1b_YC2 <- peaks_function(scen10_1b_top_yc) 
+
+S10_1b_YC_in_per_tide <- (S10_1b_YC1$tide_vol_in + S10_1b_YC2$tide_vol_in)
+S10_1b_YC_out_per_tide <- (S10_1b_YC1$tide_vol_out + S10_1b_YC2$tide_vol_out)
+
+# scenario 10- 1c 1b
+S10_1c_MR <- peaks_function(scen10_1c_MR)
+S10_1c1b_YC <- peaks_function(scen10_1c1b_YC)
+
+S10_1c_MR_in_per_tide <- S10_1c_MR$tide_vol_in # keep this separated because this is 1c on its own whereas the other is both.
+S10_1c1b_YC_in_per_tide <- S10_1c1b_YC$tide_vol_in
+S10_1c_MR_out_per_tide <- S10_1c_MR$tide_vol_out 
+S10_1c1b_YC_out_per_tide <- S10_1c1b_YC$tide_vol_out
+
+# scenario 10 - 1d
+S10_1d_YC <- peaks_function(scen10_1d_yc)
+
+S10_1d_YC_in_per_tide <- S10_1d_YC$tide_vol_in
+S10_1d_YC_out_per_tide <- S10_1d_YC$tide_vol_out 
+
+# scenario 10 - 3a
+S10_3a_YC1 <- peaks_function(scen10_3a_east_yc)
+S10_3a_YC2 <- peaks_function(scen10_3a_south_yc)
+S10_3a_YC3 <- peaks_function(scen10_3a_tl_yc)
+#S10_3a_YC4 <- peaks_function(scen10_3a_top_yc) # doesn't work - troubleshoot below
+
+#S10_3a_YC_in_per_tide <- (S10_3a_YC1$tide_vol_in + S10_3a_YC2$tide_vol_in + S10_3a_YC3$tide_vol_in + S10_3a_YC4$tide_vol_in)
+#S10_3a_YC_out_per_tide <- (S10_3a_YC1$tide_vol_out + S10_3a_YC2$tide_vol_out + S10_3a_YC3$tide_vol_out + S10_3a_YC4$tide_vol_out)
+
+# scenario 10 - CCCAN
+S10_CCCAN_CC1 <- peaks_function(scen10_Nnat_TM_cc)
+S10_CCCAN_CC2 <- peaks_function(scen10_Nnat_TR_cc)
+S10_CCCAN_YC <- peaks_function(scen10_Nnat_yc)
+
+S10_CCCAN_all_in_per_tide <- (S10_CCCAN_CC1$tide_vol_in + S10_CCCAN_CC2$tide_vol_in + S10_CCCAN_YC$tide_vol_in)
+S10_CCCAN_all_out_per_tide <- (S10_CCCAN_CC1$tide_vol_out + S10_CCCAN_CC2$tide_vol_out + S10_CCCAN_YC$tide_vol_out)
+
+# scenario 10 - CCCAS
+S10_CCCAS <- peaks_function(scen10_Snat)
+
+S10_CCCAS_all_in_per_tide <- S10_CCCAS$tide_vol_in
+S10_CCCAS_all_out_per_tide <- S10_CCCAS$tide_vol_out
+
+# scenario 10 - cccpn
+S10_CCCPN_1 <- peaks_function(scen10_cccpn_bl) # 28 tides calc
+S10_CCCPN_2 <- peaks_function(scen10_cccpn_east) # 46 tides calc
+S10_CCCPN_3 <- peaks_function(scen10_cccpn_tl) # 28 tides calc
+S10_CCCPN_4 <- peaks_function(scen10_cccpn_top) # 46 tides calc
+
+# tides are not properly calculated, however this doesn't matter, because we already standardised calculations of "in and out per tide" by dividing by 54, rather than the number of tides.
+S10_CCCPN_all_in_per_tide <- (S10_CCCPN_1$tide_vol_in + S10_CCCPN_2$tide_vol_in + S10_CCCPN_3$tide_vol_in + S10_CCCPN_4$tide_vol_in)
+S10_CCCPN_all_out_per_tide <- (S10_CCCPN_1$tide_vol_out + S10_CCCPN_2$tide_vol_out + S10_CCCPN_3$tide_vol_out + S10_CCCPN_4$tide_vol_out)
+
+# scenario 10 - cccps
+S10_CCCPS_1 <- peaks_function(scen10_cccps_bl) # 52 tides calc
+S10_CCCPS_2 <- peaks_function(scen10_cccps_tr) # 49 tides calc
+S10_CCCPS_3 <- peaks_function(scen10_cccps_tl) # 49 tides calc
+S10_CCCPS_4 <- peaks_function(scen10_cccps_bottom) # 52 tides calc
+
+S10_CCCPS_all_in_per_tide <- (S10_CCCPS_1$tide_vol_in + S10_CCCPS_2$tide_vol_in + S10_CCCPS_3$tide_vol_in + S10_CCCPS_4$tide_vol_in)
+S10_CCCPS_all_out_per_tide <- (S10_CCCPS_1$tide_vol_out + S10_CCCPS_2$tide_vol_out + S10_CCCPS_3$tide_vol_out + S10_CCCPS_4$tide_vol_out)
+
+# scenario 10 - 2a1
+S10_2A1 <- peaks_function(scen10_2a1) # 26 tides calc
+
+# number of tides not calc properly, however this doesn't matter, because we already standardised calculations of "in and out per tide" by dividing by 54, rather than the number of tides.
+S10_2A1_in_per_tide <- S10_2A1$tide_vol_in
+S10_2A1_out_per_tide <- S10_2A1$tide_vol_out
+```
+
+Scenario 11.
+
+```{r InputOutput_volumes_Scenario_11}
+# scenario 11 - 1a
+S11_1a_CC1 <- peaks_function(scen11_TL_cc)
+S11_1a_CC2 <- peaks_function(scen11_TR_cc)
+S11_1a_YC1 <- peaks_function(scen11_BL_yc)
+S11_1a_YC2 <- peaks_function(scen11_BR_yc)
+
+S11_1a_all_in_per_tide <- (S11_1a_CC1$tide_vol_in + S11_1a_CC2$tide_vol_in + S11_1a_YC1$tide_vol_in + S11_1a_YC2$tide_vol_in)
+S11_1a_all_out_per_tide <- (S11_1a_CC1$tide_vol_out + S11_1a_CC2$tide_vol_out + S11_1a_YC1$tide_vol_out + S11_1a_YC2$tide_vol_out)
+
+# scenario 11 - 1b
+S11_1b_YC1 <- peaks_function(scen11_1b_mid_yc)
+S11_1b_YC2 <- peaks_function(scen11_1b_top_yc) 
+
+S11_1b_YC_in_per_tide <- (S11_1b_YC1$tide_vol_in + S11_1b_YC2$tide_vol_in)
+S11_1b_YC_out_per_tide <- (S11_1b_YC1$tide_vol_out + S11_1b_YC2$tide_vol_out)
+
+# scenario 11- 1c 1b
+S11_1c_MR <- peaks_function(scen11_1c_MR)
+S11_1c1b_YC <- peaks_function(scen11_1c1b_YC)
+
+S11_1c_MR_in_per_tide <- S11_1c_MR$tide_vol_in # keep this separated because this is 1c on its own whereas the other is both.
+S11_1c1b_YC_in_per_tide <- S11_1c1b_YC$tide_vol_in
+S11_1c_MR_out_per_tide <- S11_1c_MR$tide_vol_out 
+S11_1c1b_YC_out_per_tide <- S11_1c1b_YC$tide_vol_out
+
+# scenario 11 - 1d
+S11_1d_YC <- peaks_function(scen11_1d_yc)
+
+S11_1d_YC_in_per_tide <- S11_1d_YC$tide_vol_in
+S11_1d_YC_out_per_tide <- S11_1d_YC$tide_vol_out 
+
+# scenario 11 - 3a
+S11_3a_YC1 <- peaks_function(scen11_3a_east_yc)
+S11_3a_YC2 <- peaks_function(scen11_3a_south_yc)
+S11_3a_YC3 <- peaks_function(scen11_3a_tl_yc)
+#S11_3a_YC4 <- peaks_function(scen11_3a_top_yc) # doesn't work - troubleshoot below
+
+#S11_3a_YC_in_per_tide <- (S11_3a_YC1$tide_vol_in + S11_3a_YC2$tide_vol_in + S11_3a_YC3$tide_vol_in + S11_3a_YC4$tide_vol_in)
+#S11_3a_YC_out_per_tide <- (S11_3a_YC1$tide_vol_out + S11_3a_YC2$tide_vol_out + S11_3a_YC3$tide_vol_out + S11_3a_YC4$tide_vol_out)
+
+# scenario 11 - CCCAN
+S11_CCCAN_CC1 <- peaks_function(scen11_Nnat_TM_cc)
+S11_CCCAN_CC2 <- peaks_function(scen11_Nnat_TR_cc)
+S11_CCCAN_YC <- peaks_function(scen11_Nnat_yc)
+
+S11_CCCAN_all_in_per_tide <- (S11_CCCAN_CC1$tide_vol_in + S11_CCCAN_CC2$tide_vol_in + S11_CCCAN_YC$tide_vol_in)
+S11_CCCAN_all_out_per_tide <- (S11_CCCAN_CC1$tide_vol_out + S11_CCCAN_CC2$tide_vol_out + S11_CCCAN_YC$tide_vol_out)
+
+# scenario 11 - CCCAS
+S11_CCCAS <- peaks_function(scen11_Snat)
+
+S11_CCCAS_all_in_per_tide <- S11_CCCAS$tide_vol_in
+S11_CCCAS_all_out_per_tide <- S11_CCCAS$tide_vol_out
+
+# scenario 11 - cccpn
+S11_CCCPN_1 <- peaks_function(scen11_cccpn_bl) # 28 tides calc
+S11_CCCPN_2 <- peaks_function(scen11_cccpn_east) # 73 tides calc
+S11_CCCPN_3 <- peaks_function(scen11_cccpn_tl) # 28 tides calc
+S11_CCCPN_4 <- peaks_function(scen11_cccpn_top) # 46 tides calc
+
+# tides are not properly calculated, however this doesn't matter, because we already standardised calculations of "in and out per tide" by dividing by 54, rather than the number of tides..
+S11_CCCPN_all_in_per_tide <- (S11_CCCPN_1$tide_vol_in + S11_CCCPN_2$tide_vol_in + S11_CCCPN_3$tide_vol_in + S11_CCCPN_4$tide_vol_in)
+S11_CCCPN_all_out_per_tide <- (S11_CCCPN_1$tide_vol_out + S11_CCCPN_2$tide_vol_out + S11_CCCPN_3$tide_vol_out + S11_CCCPN_4$tide_vol_out)
+
+# scenario 11 - cccps
+S11_CCCPS_1 <- peaks_function(scen11_cccps_bl) # 52 tides calc
+S11_CCCPS_2 <- peaks_function(scen11_cccps_tr) # 49 tides calc
+S11_CCCPS_3 <- peaks_function(scen11_cccps_tl) # 49 tides calc
+S11_CCCPS_4 <- peaks_function(scen11_cccps_bottom) # 53 tides calc
+
+S11_CCCPS_all_in_per_tide <- (S11_CCCPS_1$tide_vol_in + S11_CCCPS_2$tide_vol_in + S11_CCCPS_3$tide_vol_in + S11_CCCPS_4$tide_vol_in)
+S11_CCCPS_all_out_per_tide <- (S11_CCCPS_1$tide_vol_out + S11_CCCPS_2$tide_vol_out + S11_CCCPS_3$tide_vol_out + S11_CCCPS_4$tide_vol_out)
+
+# scenario 11 - 2a1
+S11_2A1 <- peaks_function(scen11_2a1) # 26 tides calc
+
+# number of tides not calc properly, however this doesn't matter, because we already standardised calculations of "in and out per tide" by dividing by 54, rather than the number of tides.
+S11_2A1_in_per_tide <- S11_2A1$tide_vol_in
+S11_2A1_out_per_tide <- S11_2A1$tide_vol_out
+
+# scenario 11 - ccw
+S11_CCW <- peaks_function(scen11_3b) # 50 tides
+
+S11_CCW_in_per_tide <- S11_CCW$tide_vol_in
+S11_CCW_out_per_tide <- S11_CCW$tide_vol_out
+```
+
+CCCAS for the other scenarios that we didn't compute it for yet (5-8)
+
+```{r InputOutput_volumes_CCCAS}
+# scenario 5 - CCCAS
+S5_CCCAS <- peaks_function(scen5_Snat)
+
+S5_CCCAS_all_in_per_tide <- S5_CCCAS$tide_vol_in
+S5_CCCAS_all_out_per_tide <- S5_CCCAS$tide_vol_out
+
+# scenario 6 - CCCAS
+S6_CCCAS <- peaks_function(scen6_Snat)
+
+S6_CCCAS_all_in_per_tide <- S6_CCCAS$tide_vol_in
+S6_CCCAS_all_out_per_tide <- S6_CCCAS$tide_vol_out
+
+# scenario 7 - CCCAS
+S7_CCCAS <- peaks_function(scen7_Snat)
+
+S7_CCCAS_all_in_per_tide <- S7_CCCAS$tide_vol_in
+S7_CCCAS_all_out_per_tide <- S7_CCCAS$tide_vol_out
+
+# scenario 8 - CCCAS
+S8_CCCAS <- peaks_function(scen8_Snat)
+
+S8_CCCAS_all_in_per_tide <- S8_CCCAS$tide_vol_in
+S8_CCCAS_all_out_per_tide <- S8_CCCAS$tide_vol_out
+```
+
+Troubleshooting for newly added volumes. Just 3a YC4 for each of scenario 9, 10 and 11.
+
+```{r troubleshoot_new_volumes}
+# scenario 9 - 3a top yc
+
+# visualise what a dataset looks like - small flows
+ggplot(scen9_3a_top_yc, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen9_3a_top_yc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks and troughs. small flows. try setting min peak height at 1.
+peaks <- findpeaks(scen9_3a_top_yc$Flow_m3_15min, minpeakheight = 0.1, minpeakdistance = 20)
+troughs <- -findpeaks(-scen9_3a_top_yc$Flow_m3_15min, minpeakheight = 0.1, minpeakdistance = 20) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+positives <- scen9_3a_top_yc %>% dplyr::filter(Flow_m3_15min>0)
+negatives <- scen9_3a_top_yc %>% dplyr::filter(Flow_m3_15min<0)
+
+S9_3a_YC4 <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 54,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 54,
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+
+# 3a calculations
+S9_3a_YC_in_per_tide <- (S9_3a_YC1$tide_vol_in + S9_3a_YC2$tide_vol_in + S9_3a_YC3$tide_vol_in + S9_3a_YC4$tide_vol_in)
+S9_3a_YC_out_per_tide <- (S9_3a_YC1$tide_vol_out + S9_3a_YC2$tide_vol_out + S9_3a_YC3$tide_vol_out + S9_3a_YC4$tide_vol_out)
+
+
+# scenario 10
+ggplot(scen10_3a_top_yc, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen10_3a_top_yc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks and troughs. small flows. try setting min peak height at 1.
+peaks <- findpeaks(scen10_3a_top_yc$Flow_m3_15min, minpeakheight = 0.01, minpeakdistance = 30)
+troughs <- -findpeaks(-scen10_3a_top_yc$Flow_m3_15min, minpeakheight = 0.01, minpeakdistance = 30) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+positives <- scen10_3a_top_yc %>% dplyr::filter(Flow_m3_15min>0)
+negatives <- scen10_3a_top_yc %>% dplyr::filter(Flow_m3_15min<0)
+
+S10_3a_YC4 <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 54,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 54,
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+
+# 3a calculations
+S10_3a_YC_in_per_tide <- (S10_3a_YC1$tide_vol_in + S10_3a_YC2$tide_vol_in + S10_3a_YC3$tide_vol_in + S10_3a_YC4$tide_vol_in)
+S10_3a_YC_out_per_tide <- (S10_3a_YC1$tide_vol_out + S10_3a_YC2$tide_vol_out + S10_3a_YC3$tide_vol_out + S10_3a_YC4$tide_vol_out)
+
+
+# scenario 11
+ggplot(scen11_3a_top_yc, aes(x = Time, y = Flow_m3_15min)) +
+  geom_line()
+# closer inspection of first 200 points
+ggplot(scen11_3a_top_yc[1:200,], aes(x = Time, y = Flow_m3_15min)) +
+  geom_line() 
+
+# identify peaks and troughs. small flows. try setting min peak height at 1.
+peaks <- findpeaks(scen11_3a_top_yc$Flow_m3_15min, minpeakheight = 0.01, minpeakdistance = 30)
+troughs <- -findpeaks(-scen11_3a_top_yc$Flow_m3_15min, minpeakheight = 0.01, minpeakdistance = 30) # feed in negative data to find troughs. making them negative again with the negative in front of the function
+
+positives <- scen11_3a_top_yc %>% dplyr::filter(Flow_m3_15min>0)
+negatives <- scen11_3a_top_yc %>% dplyr::filter(Flow_m3_15min<0)
+
+S11_3a_YC4 <- tibble(ntides = nrow(peaks),
+                 tide_vol_in = sum(positives$Flow_m3_15min) / 54,
+                 tide_vol_out = sum(negatives$Flow_m3_15min) / 54,
+                 tide_net_exchange = tide_vol_in + tide_vol_out)
+
+# 3a calculations
+S11_3a_YC_in_per_tide <- (S11_3a_YC1$tide_vol_in + S11_3a_YC2$tide_vol_in + S11_3a_YC3$tide_vol_in + S11_3a_YC4$tide_vol_in)
+S11_3a_YC_out_per_tide <- (S11_3a_YC1$tide_vol_out + S11_3a_YC2$tide_vol_out + S11_3a_YC3$tide_vol_out + S11_3a_YC4$tide_vol_out)
+
+```
+
+#### 2.5.2 Perform calculations

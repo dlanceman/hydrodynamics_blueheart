@@ -50,6 +50,8 @@ ChannelWQ <- read_excel(here("Data/BlueHeart_Nov2024_WaterSampleData.xlsx"), she
 
 Ch2025WQ <- read_excel(here("Data/Water_quality_drains_2025.xlsx")) 
 
+ChWQ_all <- read_excel(here("Data/BlueHeart_Nov2024_WaterSampleData.xlsx"), sheet = "WaterQualityWithExtraDates")
+
 Maroochy_Rain <- read_csv(here("Data/Sunshine_Coast_Airport_Rainfall_040861.csv")) %>% 
   select(Year, Month, `Monthly Precipitation Total (millimetres)`) %>% 
   rename(Rain_mm = `Monthly Precipitation Total (millimetres)`) %>% 
@@ -223,4 +225,54 @@ Maroochy_E01505_Oct_to_Dec <- MaroochyWQ_E1505_all %>% filter(Month %in% c(10:12
             mean_Conductivity_mScm = mean(Conductivity_mScm, na.rm = TRUE),
             mean_Temp_deg = mean(Temp_degC, na.rm = TRUE),
             mean_Turbidity_NTU = mean(Turbidity_NTU, na.rm = TRUE))
+```
+
+Make a plot with tide times on it. Include tidal data and other data at the same locations.
+
+```{r All_data_tide_graph}
+P3 <- ggplot(ChWQ_all, aes(x = Time_since_high_tide, y = `NOX-N_av`, group = Creek, color = Creek)) +
+  geom_point(data = dplyr::filter(ChWQ_all, Position %in% c("Y1", "M1", "C1"))) +
+  geom_line(data = dplyr::filter(ChWQ_all, Position %in% c("Y1", "M1", "C1"), Date < "2024-11-28")) +
+  #scale_y_log10() +
+  ylab("Mean NOx (mg/L)") +
+  xlab("Time since high tide (hours)") +
+  theme_classic() +
+  theme(axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18),
+        legend.text = element_text(size = 18),
+        legend.title = element_text(size = 18)) +
+  scale_color_viridis_d()
+P3
+
+#ggsave(here("Output/fig/NOx_time_since_high_tide.png"), P3, width = 2400, height = 1600, units = "px")
+
+P4 <- ggplot(ChWQ_all, aes(x = Tidal_height_m, y = `NOX-N_av`, group = Creek, color = Creek)) +
+  geom_point(data = dplyr::filter(ChWQ_all, Position %in% c("Y1", "M1", "C1"))) +
+  geom_line(data = dplyr::filter(ChWQ_all, Position %in% c("Y1", "M1", "C1"), Date < "2024-11-28")) +
+  #scale_y_log10() +
+  ylab("Mean NOx (mg/L)") +
+  theme_classic() +
+  theme(axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18))
+P4 
+```
+
+Also plot longitudinal data along each of Yandina and Coolum creeks.
+
+```{r Longitudinal_graph}
+P5 <- ggplot(ChWQ_all %>% na.omit() %>%  dplyr::filter(Date > "2024-11-28" & Date < "2024-11-30"), aes(x = Distance_from_road_km, y = `NOX-N_av`, group = Creek, color = Creek)) +
+  geom_point() +
+  geom_line() +
+  #scale_y_log10() +
+  ylab("Mean NOx (mg/L)") +
+  xlab("Distance downstream (km)") +
+  theme_classic() +
+  theme(axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18),
+        legend.text = element_text(size = 18),
+        legend.title = element_text(size = 18)) +
+  scale_color_viridis_d()
+P5
+
+#ggsave(here("Output/fig/NOx_longitudinal.png"), P5, width = 2400, height = 1600, units = "px")
 ```
