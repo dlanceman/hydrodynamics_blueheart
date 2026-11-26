@@ -547,7 +547,7 @@ troughs <- -findpeaks(-scen7_3a_top_yc$Flow_m3_15min, minpeakheight = 0.01, minp
 positives <- scen7_3a_top_yc %>% dplyr::filter(Flow_m3_15min>0)
 negatives <- scen7_3a_top_yc %>% dplyr::filter(Flow_m3_15min<0)
 
-# divide by 53 or the expected number of high/low tides rather than the actual number, since there are many cases where there are no tides
+# divide by 54 or the expected number of high/low tides rather than the actual number, since there are many cases where there are no tides
 S7_3a_YC4 <- tibble(ntides = nrow(peaks),
                  tide_vol_in = sum(positives$Flow_m3_15min) / 54,
                  tide_vol_out = sum(negatives$Flow_m3_15min) / 54,
@@ -1160,7 +1160,29 @@ df7 <- df7 %>% mutate(Final_channel_NOx_conc_mgL =
 
 ### 2.5 Using the water quality volume approach to calculate denitrification values
 
-For the earlier part of this paper, we calculated denitrification resulting from each scenario. This is different than the water quality calculations, as for water quality, we were focussing on Yandina Creek only so had to take into account volumes coming in and out of Yandina Creek, and only focussed on wetlands attached to Yandina Creek. However, denitrification just cares about the total volume coming into wetlands in each scenario. Therefore, we need volumes in and out of all wetlands from all creeks. We will also use the input NOx concentration of 0.053 for this broader section (not 0.076).
+For the earlier part of this paper, we calculated denitrification resulting from each scenario. This is different than the water quality calculations, as for water quality, we were focussing on Yandina Creek only so had to take into account volumes coming in and out of Yandina Creek, and only focussed on wetlands attached to Yandina Creek. However, denitrification just cares about the total volume coming into wetlands in each scenario. Therefore, we need volumes in and out of all wetlands from all creeks. We will also use the input NOx concentration of 0.05305 for this broader section (not 0.076). Also, the type of denitrification we will use for calculating floodplain denitrification is Dw + Dn, or natural denitrification (NOx to eventually N2) + nitrification-denitrificaiton (ammonium to NOx to eventually N2). This combined parameter accounts for all denitrification occuring in water and tide deposited sediments on floodplains, but excludes denitrification measured in experiments that was due to nitrate deliberately added.
+
+We also need to combine floodplain for calculations where inflows from one point on a channel reach multiple floodplains. This is because supply limitation calculations take inflows that can't differentiate which floodplain they end up in.
+
+Therefore need to group floodplains as follows:
+
+-   1a (Site 1)
+
+-   1b and 1c (Sites 2 and 3)
+
+-   2a1 (Site 5)
+
+-   2a2 (Site 6) and CCCPN (CP North)
+
+-   2a3 (Site 7) and CCCPS (CP South)
+
+-   3a (YW) and 5b (Site 9)
+
+-   3b (CW)
+
+-   1d and 5a and 5c (Sites 4, 8 and 10)
+
+-   CCCAN and S (CA North and South)
 
 #### 2.5.1 Input more data and generate associated input and outcome volumes
 
@@ -1630,3 +1652,683 @@ S11_3a_YC_out_per_tide <- (S11_3a_YC1$tide_vol_out + S11_3a_YC2$tide_vol_out + S
 ```
 
 #### 2.5.2 Perform calculations
+
+The equation for Dw + Dn in the Blue Heart is:
+
+*Log10 (denitrification, mg/m2/h) = 0.7667 (log10 (NO3 (mg/L)) + 1.4374 + (0.0124\*Soil OC%))*
+
+This can be rearranged as:
+
+*denitrification, mg/m2/h = 10\^(0.7667 (log10 (NO3 (mg/L))) + 1.4374 + (0.0124\*Soil OC%))*
+
+Given we are taking the input nitrate value as a constant of **0.0535**, this then becomes:
+
+*denitrification, mg/m2/h = 10\^(0.7667 (log10 (0.05305)) + 1.4374+ (0.0124\*Soil OC%))*
+
+By substituting our soil organic carbon value for each of the three elevation classes (High (\>0.75m) = 4.1, Medium (0.5-0.75m) = 11.5, Low (0-0.5m) = 9), we get the following results:
+
+High elevation: *denitrification, mg/m2/h = 3.239*
+
+Medium elevation: *denitrification, mg/m2/h = 4.001*
+
+Low elevation: *denitrification, mg/m2/h = 3.726*
+
+We are just doing denitrification here, so don't need any rows related to water quality calculations.
+
+```{r table_mutation_dw_dn}
+# create table for dw + dn with 0.05305 input
+dwdn <- data.frame(Scenario = character(), # 1
+                 Floodplain = character(),  # 2
+                 Input_vol_YC_m3 = double(), # 3
+                 Input_vol_other_m3 = double(), # 4
+                 #Input_vol_total_m3 = double(), # 5
+                 Input_conc_NOx_mgL = double(),# 6
+                 #Total_input_NOx_kg = double(), # 7
+                 Inun_area_m2 = double(), # 8
+                 Inun_area_low_m2 = double(), # 9
+                 Inun_area_med_m2 = double(), # 10
+                 Inun_area_high_m2 = double() #, # 11
+                 #Denit_potential_kg_12hr = double(), # 12
+                 #Final_wetland_NOx_kg = double(), # 13
+                 ) 
+
+# fill with values specific to scenario 1
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 1", # 1
+  Floodplain = "5c",  # 2
+  Input_vol_YC_m3 = S1_5C_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S1$`5C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S1$`5C_area_m2`) * 0.081, # 9
+  Inun_area_med_m2 = mean(Inun_S1$`5C_area_m2`) * 0.265, # 10
+  Inun_area_high_m2 = mean(Inun_S1$`5C_area_m2`) * 0.654 # 11
+)  
+
+# fill with values specific to scenario 2
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 2", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S2_1c_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S2_1c_MR_in_per_tide,  # 4 
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S2$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S2$`1C_area_m2`) * 0.859, # 9
+  Inun_area_med_m2 = mean(Inun_S2$`1C_area_m2`) * 0.089, # 10
+  Inun_area_high_m2 = mean(Inun_S2$`1C_area_m2`) * 0.052 # 11
+) 
+
+# fill with values specific to scenario 3
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 3", # 1
+  Floodplain = "1a",  # 2
+  Input_vol_YC_m3 = S3_1a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S3_1a_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S3$`1A_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S3$`1A_area_m2`) * 0.763, # 9
+  Inun_area_med_m2 = mean(Inun_S3$`1A_area_m2`) * 0.177, # 10
+  Inun_area_high_m2 = mean(Inun_S3$`1A_area_m2`) * 0.06 # 11
+)  
+
+# fill with values specific to scenario 4
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 4", # 1
+  Floodplain = "1d",  # 2
+  Input_vol_YC_m3 = S4_1D_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S4$`1D_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S4$`1D_area_m2`) * 0.845, # 9
+  Inun_area_med_m2 = mean(Inun_S4$`1D_area_m2`) * 0.122, # 10
+  Inun_area_high_m2 = mean(Inun_S4$`1D_area_m2`) * 0.032 # 11
+) 
+
+# fill with values specific to scenario 5
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 5", # 1
+  Floodplain = "CCCAN and CCCAS",  # 2
+  Input_vol_YC_m3 = S5_CCCAN_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S5_CCCAN_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S5$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S5$NaturalNorth_area_m2) * 0.103, # 9
+  Inun_area_med_m2 = mean(Inun_S5$NaturalNorth_area_m2) * 0.54, # 10
+  Inun_area_high_m2 = mean(Inun_S5$NaturalNorth_area_m2) * 0.357 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 5", # 1
+  Floodplain = "CCCAS",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S5_CCCAS_all_in_per_tide,  # 4, this is all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S5$NaturalSouth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S5$NaturalSouth_area_m2) * 0.118, # 9
+  Inun_area_med_m2 = mean(Inun_S5$NaturalSouth_area_m2) * 0.163, # 10
+  Inun_area_high_m2 = mean(Inun_S5$NaturalSouth_area_m2) * 0.719 # 11
+) 
+
+# fill with values specific to scenario 6
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 6", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = S6_CCCAN_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S6_CCCAN_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S6$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.101, # 9
+  Inun_area_med_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.539, # 10
+  Inun_area_high_m2 = mean(Inun_S6$NaturalNorth_area_m2) * 0.361 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 6", # 1
+  Floodplain = "CCCAS",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S6_CCCAS_all_in_per_tide,  # 4 - putting all inputs together regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S6$NaturalSouth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S6$NaturalSouth_area_m2) * 0.117, # 9
+  Inun_area_med_m2 = mean(Inun_S6$NaturalSouth_area_m2) * 0.166, # 10
+  Inun_area_high_m2 = mean(Inun_S6$NaturalSouth_area_m2) * 0.717 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 6", # 1
+  Floodplain = "3a",  # 2
+  Input_vol_YC_m3 = S6_3A_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S6$YCW_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S6$YCW_area_m2) * 0.912, # 9
+  Inun_area_med_m2 = mean(Inun_S6$YCW_area_m2) * 0.077, # 10
+  Inun_area_high_m2 = mean(Inun_S6$YCW_area_m2) * 0.012 # 11
+)  
+
+# fill with values specific to scenario 7
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "1a",  # 2
+  Input_vol_YC_m3 = S7_1a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S7_1a_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S7$`1A_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S7$`1A_area_m2`) * 0.777, # 9
+  Inun_area_med_m2 = mean(Inun_S7$`1A_area_m2`) * 0.163, # 10
+  Inun_area_high_m2 = mean(Inun_S7$`1A_area_m2`) * 0.06 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = S7_CCCAN_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S7_CCCAN_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S7$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S7$NaturalNorth_area_m2) * 0.105, # 9
+  Inun_area_med_m2 = mean(Inun_S7$NaturalNorth_area_m2) * 0.527, # 10
+  Inun_area_high_m2 = mean(Inun_S7$NaturalNorth_area_m2) * 0.368 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "CCCAS",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S7_CCCAS_all_in_per_tide,  # 4 - this is all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S7$NaturalSouth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S7$NaturalSouth_area_m2) * 0.121, # 9
+  Inun_area_med_m2 = mean(Inun_S7$NaturalSouth_area_m2) * 0.168, # 10
+  Inun_area_high_m2 = mean(Inun_S7$NaturalSouth_area_m2) * 0.717 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S7_1c_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S7_1c_MR_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S7$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S7$`1C_area_m2`) * 0.887, # 9
+  Inun_area_med_m2 = mean(Inun_S7$`1C_area_m2`) * 0.071, # 10
+  Inun_area_high_m2 = mean(Inun_S7$`1C_area_m2`) * 0.042 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "3a",  # 2
+  Input_vol_YC_m3 = S7_3a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S7$`YCW_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S7$`YCW_area_m2`) * 0.914, # 9
+  Inun_area_med_m2 = mean(Inun_S7$`YCW_area_m2`) * 0.076, # 10
+  Inun_area_high_m2 = mean(Inun_S7$`YCW_area_m2`) * 0.011 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 7", # 1
+  Floodplain = "1b",  # 2
+  Input_vol_YC_m3 = S7_1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S7$`1B_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S7$`1B_area_m2`) * 0.901, # 9
+  Inun_area_med_m2 = mean(Inun_S7$`1B_area_m2`) * 0.049, # 10
+  Inun_area_high_m2 = mean(Inun_S7$`1B_area_m2`) * 0.050 # 11
+) 
+
+# fill with values specific to scenario 8
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "1a",  # 2
+  Input_vol_YC_m3 = S8_1a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S8_1a_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S8$`1A_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S8$`1A_area_m2`) * 0.895, # 9
+  Inun_area_med_m2 = mean(Inun_S8$`1A_area_m2`) * 0.052, # 10
+  Inun_area_high_m2 = mean(Inun_S8$`1A_area_m2`) * 0.053 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = S8_CCCAN_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S8_CCCAN_CC_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S8$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S8$NaturalNorth_area_m2) * 0.105, # 9
+  Inun_area_med_m2 = mean(Inun_S8$NaturalNorth_area_m2) * 0.525, # 10
+  Inun_area_high_m2 = mean(Inun_S8$NaturalNorth_area_m2) * 0.37 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "CCCAS",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S8_CCCAS_all_in_per_tide,  # 4 - all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S8$NaturalSouth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S8$NaturalSouth_area_m2) * 0.12, # 9
+  Inun_area_med_m2 = mean(Inun_S8$NaturalSouth_area_m2) * 0.161, # 10
+  Inun_area_high_m2 = mean(Inun_S8$NaturalSouth_area_m2) * 0.72 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S8_1c1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S8_1c_MR_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S8$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S8$`1C_area_m2`) * 0.884, # 9
+  Inun_area_med_m2 = mean(Inun_S8$`1C_area_m2`) * 0.073, # 10
+  Inun_area_high_m2 = mean(Inun_S8$`1C_area_m2`) * 0.043 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "1b",  # 2
+  Input_vol_YC_m3 = S8_1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S8$`1B_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S8$`1B_area_m2`) * 0.895, # 9
+  Inun_area_med_m2 = mean(Inun_S8$`1B_area_m2`) * 0.052, # 10
+  Inun_area_high_m2 = mean(Inun_S8$`1B_area_m2`) * 0.053 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "1d",  # 2
+  Input_vol_YC_m3 = S8_1d_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S8$`1D_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S8$`1D_area_m2`) * 0.853, # 9
+  Inun_area_med_m2 = mean(Inun_S8$`1D_area_m2`) * 0.114, # 10
+  Inun_area_high_m2 = mean(Inun_S8$`1D_area_m2`) * 0.033 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 8", # 1
+  Floodplain = "3a",  # 2
+  Input_vol_YC_m3 = S8_3a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S8$`YCW_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S8$`YCW_area_m2`) * 0.911, # 9
+  Inun_area_med_m2 = mean(Inun_S8$`YCW_area_m2`) * 0.078, # 10
+  Inun_area_high_m2 = mean(Inun_S8$`YCW_area_m2`) * 0.011 # 11
+)  
+
+# fill with values specific to scenario 9
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 9", # 1
+  Floodplain = "1a",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S9_1a_all_in_per_tide,  # 4 - putting all inflows here regardless of input channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S9$`1A_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S9$`1A_area_m2`) * 0.78, # 9
+  Inun_area_med_m2 = mean(Inun_S9$`1A_area_m2`) * 0.16, # 10
+  Inun_area_high_m2 = mean(Inun_S9$`1A_area_m2`) * 0.06 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 9", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S9_CCCAN_all_in_per_tide,  # 4 - putting all inflows here regardless of input channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S9$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S9$NaturalNorth_area_m2) * 0.105, # 9
+  Inun_area_med_m2 = mean(Inun_S9$NaturalNorth_area_m2) * 0.529, # 10
+  Inun_area_high_m2 = mean(Inun_S9$NaturalNorth_area_m2) * 0.366 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 9", # 1
+  Floodplain = "CCCAS",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S9_CCCAS_all_in_per_tide,  # 4 - all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S9$NaturalSouth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S9$NaturalSouth_area_m2) * 0.12, # 9
+  Inun_area_med_m2 = mean(Inun_S9$NaturalSouth_area_m2) * 0.16, # 10
+  Inun_area_high_m2 = mean(Inun_S9$NaturalSouth_area_m2) * 0.72 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 9", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S9_1c1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S9_1c_MR_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S9$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S9$`1C_area_m2`) * 0.883, # 9
+  Inun_area_med_m2 = mean(Inun_S9$`1C_area_m2`) * 0.074, # 10
+  Inun_area_high_m2 = mean(Inun_S9$`1C_area_m2`) * 0.043 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 9", # 1
+  Floodplain = "1b",  # 2
+  Input_vol_YC_m3 = S9_1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S9$`1B_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S9$`1B_area_m2`) * 0.895, # 9
+  Inun_area_med_m2 = mean(Inun_S9$`1B_area_m2`) * 0.052, # 10
+  Inun_area_high_m2 = mean(Inun_S9$`1B_area_m2`) * 0.053 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 9", # 1
+  Floodplain = "1d",  # 2
+  Input_vol_YC_m3 = S9_1d_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S9$`1D_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S9$`1D_area_m2`) * 0.856, # 9
+  Inun_area_med_m2 = mean(Inun_S9$`1D_area_m2`) * 0.111, # 10
+  Inun_area_high_m2 = mean(Inun_S9$`1D_area_m2`) * 0.033 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 9", # 1
+  Floodplain = "3a",  # 2
+  Input_vol_YC_m3 = S9_3a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S9$`YCW_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S9$`YCW_area_m2`) * 0.91, # 9
+  Inun_area_med_m2 = mean(Inun_S9$`YCW_area_m2`) * 0.078, # 10
+  Inun_area_high_m2 = mean(Inun_S9$`YCW_area_m2`) * 0.011 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 9", # 1
+  Floodplain = "CCCPN",  # 2 - note this also includes 2a2 (not relevant in scenario 9 because it doesn't contain 2a2 but relevant in scenario 10 and 11)
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S9_CCCPN_all_in_per_tide,  # 4 - all inflows here regardless of input channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S9$Nat_2aN_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S9$Nat_2aN_area_m2) * 0.026, # 9
+  Inun_area_med_m2 = mean(Inun_S9$Nat_2aN_area_m2) * 0.711, # 10
+  Inun_area_high_m2 = mean(Inun_S9$Nat_2aN_area_m2) * 0.263 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 9", # 1
+  Floodplain = "CCCPS",  # 2 - note this also includes 2a3 (not relevant in scenario 9 because it doesn't contain 2a3 but relevant in scenario 10 and 11)
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S9_CCCPS_all_in_per_tide,  # 4 - all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S9$Nat_2AS_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S9$Nat_2AS_area_m2) * 0.135, # 9
+  Inun_area_med_m2 = mean(Inun_S9$Nat_2AS_area_m2) * 0.56, # 10
+  Inun_area_high_m2 = mean(Inun_S9$Nat_2AS_area_m2) * 0.306 # 11
+)
+
+# fill with values specific to scenario 10
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "1a",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S10_1a_all_in_per_tide,  # 4 - putting all inflows here regardless of input channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$`1A_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S10$`1A_area_m2`) * 0.78, # 9
+  Inun_area_med_m2 = mean(Inun_S10$`1A_area_m2`) * 0.16, # 10
+  Inun_area_high_m2 = mean(Inun_S10$`1A_area_m2`) * 0.06 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S10_CCCAN_all_in_per_tide,  # 4 - putting all inflows here regardless of input channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S10$NaturalNorth_area_m2) * 0.105, # 9
+  Inun_area_med_m2 = mean(Inun_S10$NaturalNorth_area_m2) * 0.528, # 10
+  Inun_area_high_m2 = mean(Inun_S10$NaturalNorth_area_m2) * 0.367 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "CCCAS",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S10_CCCAS_all_in_per_tide,  # 4 - all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$NaturalSouth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S10$NaturalSouth_area_m2) * 0.121, # 9
+  Inun_area_med_m2 = mean(Inun_S10$NaturalSouth_area_m2) * 0.16, # 10
+  Inun_area_high_m2 = mean(Inun_S10$NaturalSouth_area_m2) * 0.719 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S10_1c1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S10_1c_MR_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S10$`1C_area_m2`) * 0.883, # 9
+  Inun_area_med_m2 = mean(Inun_S10$`1C_area_m2`) * 0.074, # 10
+  Inun_area_high_m2 = mean(Inun_S10$`1C_area_m2`) * 0.043 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "1b",  # 2
+  Input_vol_YC_m3 = S10_1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$`1B_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S10$`1B_area_m2`) * 0.895, # 9
+  Inun_area_med_m2 = mean(Inun_S10$`1B_area_m2`) * 0.052, # 10
+  Inun_area_high_m2 = mean(Inun_S10$`1B_area_m2`) * 0.053 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "1d",  # 2
+  Input_vol_YC_m3 = S10_1d_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$`1D_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S10$`1D_area_m2`) * 0.856, # 9
+  Inun_area_med_m2 = mean(Inun_S10$`1D_area_m2`) * 0.111, # 10
+  Inun_area_high_m2 = mean(Inun_S10$`1D_area_m2`) * 0.033 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "3a",  # 2
+  Input_vol_YC_m3 = S10_3a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$`YCW_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S10$`YCW_area_m2`) * 0.911, # 9
+  Inun_area_med_m2 = mean(Inun_S10$`YCW_area_m2`) * 0.078, # 10
+  Inun_area_high_m2 = mean(Inun_S10$`YCW_area_m2`) * 0.011 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "CCCPN",  # 2 - note this also includes 2a2 (not relevant in scenario 9 because it doesn't contain 2a2 but relevant in scenario 10 and 11)
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S10_CCCPN_all_in_per_tide,  # 4 - all inflows here regardless of input channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$Nat_2aN_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S10$Nat_2aN_area_m2) * 0.028, # 9
+  Inun_area_med_m2 = mean(Inun_S10$Nat_2aN_area_m2) * 0.705, # 10
+  Inun_area_high_m2 = mean(Inun_S10$Nat_2aN_area_m2) * 0.266 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "CCCPS",  # 2 - note this also includes 2a3 (not relevant in scenario 9 because it doesn't contain 2a3 but relevant in scenario 10 and 11)
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S10_CCCPS_all_in_per_tide,  # 4 - all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$Nat_2AS_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S10$Nat_2AS_area_m2) * 0.127, # 9
+  Inun_area_med_m2 = mean(Inun_S10$Nat_2AS_area_m2) * 0.563, # 10
+  Inun_area_high_m2 = mean(Inun_S10$Nat_2AS_area_m2) * 0.31 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 10", # 1
+  Floodplain = "2A1",  # 2 
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S10_2A1_in_per_tide,  # 4 - all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S10$Nat_2AS_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S10$`2A1_area_m2`) * 0.132, # 9
+  Inun_area_med_m2 = mean(Inun_S10$`2A1_area_m2`) * 0.746, # 10
+  Inun_area_high_m2 = mean(Inun_S10$`2A1_area_m2`) * 0.121 # 11
+)
+
+# fill with values specific to scenario 11
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "1a",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S11_1a_all_in_per_tide,  # 4 - putting all inflows here regardless of input channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$`1A_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S11$`1A_area_m2`) * 0.78, # 9
+  Inun_area_med_m2 = mean(Inun_S11$`1A_area_m2`) * 0.16, # 10
+  Inun_area_high_m2 = mean(Inun_S11$`1A_area_m2`) * 0.06 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "CCCAN",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S11_CCCAN_all_in_per_tide,  # 4 - putting all inflows here regardless of input channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$NaturalNorth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S11$NaturalNorth_area_m2) * 0.105, # 9
+  Inun_area_med_m2 = mean(Inun_S11$NaturalNorth_area_m2) * 0.528, # 10
+  Inun_area_high_m2 = mean(Inun_S11$NaturalNorth_area_m2) * 0.367 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "CCCAS",  # 2
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S11_CCCAS_all_in_per_tide,  # 4 - all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$NaturalSouth_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S11$NaturalSouth_area_m2) * 0.121, # 9
+  Inun_area_med_m2 = mean(Inun_S11$NaturalSouth_area_m2) * 0.159, # 10
+  Inun_area_high_m2 = mean(Inun_S11$NaturalSouth_area_m2) * 0.72 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "1c",  # 2
+  Input_vol_YC_m3 = S11_1c1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = S11_1c_MR_in_per_tide,  # 4
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$`1C_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S11$`1C_area_m2`) * 0.883, # 9
+  Inun_area_med_m2 = mean(Inun_S11$`1C_area_m2`) * 0.073, # 10
+  Inun_area_high_m2 = mean(Inun_S11$`1C_area_m2`) * 0.043 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "1b",  # 2
+  Input_vol_YC_m3 = S11_1b_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$`1B_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S11$`1B_area_m2`) * 0.895, # 9
+  Inun_area_med_m2 = mean(Inun_S11$`1B_area_m2`) * 0.052, # 10
+  Inun_area_high_m2 = mean(Inun_S11$`1B_area_m2`) * 0.053 # 11
+) 
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "1d",  # 2
+  Input_vol_YC_m3 = S11_1d_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$`1D_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S11$`1D_area_m2`) * 0.856, # 9
+  Inun_area_med_m2 = mean(Inun_S11$`1D_area_m2`) * 0.111, # 10
+  Inun_area_high_m2 = mean(Inun_S11$`1D_area_m2`) * 0.033 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "3a",  # 2
+  Input_vol_YC_m3 = S11_3a_YC_in_per_tide, # 3 
+  Input_vol_other_m3 = 0,  # 4 - no other inputs
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$`YCW_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S11$`YCW_area_m2`) * 0.911, # 9
+  Inun_area_med_m2 = mean(Inun_S11$`YCW_area_m2`) * 0.078, # 10
+  Inun_area_high_m2 = mean(Inun_S11$`YCW_area_m2`) * 0.011 # 11
+)  
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "CCCPN",  # 2 - note this also includes 2a2 (not relevant in scenario 9 because it doesn't contain 2a2 but relevant in scenario 10 and 11)
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S11_CCCPN_all_in_per_tide,  # 4 - all inflows here regardless of input channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$Nat_2aN_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S11$Nat_2aN_area_m2) * 0.029, # 9
+  Inun_area_med_m2 = mean(Inun_S11$Nat_2aN_area_m2) * 0.703, # 10
+  Inun_area_high_m2 = mean(Inun_S11$Nat_2aN_area_m2) * 0.267 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "CCCPS",  # 2 - note this also includes 2a3 (not relevant in scenario 9 because it doesn't contain 2a3 but relevant in scenario 10 and 11)
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S11_CCCPS_all_in_per_tide,  # 4 - all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$Nat_2AS_area_m2), # 8
+  Inun_area_low_m2 = mean(Inun_S11$Nat_2AS_area_m2) * 0.126, # 9
+  Inun_area_med_m2 = mean(Inun_S11$Nat_2AS_area_m2) * 0.564, # 10
+  Inun_area_high_m2 = mean(Inun_S11$Nat_2AS_area_m2) * 0.311 # 11
+)
+
+dwdn <- dwdn %>% add_row(
+  Scenario = "Scenario 11", # 1
+  Floodplain = "2A1",  # 2 
+  Input_vol_YC_m3 = 0, # 3 
+  Input_vol_other_m3 = S11_2A1_in_per_tide,  # 4 - all inputs regardless of channel
+  Input_conc_NOx_mgL = 0.05305, # 6
+  Inun_area_m2 = mean(Inun_S11$`2A1_area_m2`), # 8
+  Inun_area_low_m2 = mean(Inun_S11$`2A1_area_m2`) * 0.138, # 9
+  Inun_area_med_m2 = mean(Inun_S11$`2A1_area_m2`) * 0.743, # 10
+  Inun_area_high_m2 = mean(Inun_S11$`2A1_area_m2`) * 0.119 # 11
+)
+```
+
+Overall table calculations.
+
+```{r summary_calcs_dw_dn}
+# mutate columns based on other column values and some generic values for high/med/low denitrification rates
+dwdn <- dwdn %>% mutate(
+                Input_vol_total_m3 = Input_vol_YC_m3 + Input_vol_other_m3, # 5
+                Total_input_NOx_kg = Input_conc_NOx_mgL * Input_vol_total_m3 * 1000 / 1000000, # 7 - * 1000 is to convert from m3 to L and /1000000 is to convert from mg to kg
+                Denit_potential_kg_12hr = 
+             (Inun_area_low_m2 * 3.726 + 
+              Inun_area_med_m2 * 4.001 +
+              Inun_area_high_m2 * 3.239)/1000000*12, # 12 - / 1000000 is to convert from mg to kg, * 12 is to calculate over a 12 hour period
+                Dw_Dn_denitrification = 
+               case_when(Total_input_NOx_kg - Denit_potential_kg_12hr > 0 ~ Total_input_NOx_kg - Denit_potential_kg_12hr,
+                         .default = Total_input_NOx_kg), # 13 - resulting NOx concentration is zero if potential denitrification is greater than input NOx
+             )
+```
